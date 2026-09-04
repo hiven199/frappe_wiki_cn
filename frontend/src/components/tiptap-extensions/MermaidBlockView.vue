@@ -15,6 +15,7 @@ import { useNodeViewEditable } from '@/composables/useNodeViewEditable';
 import { NodeViewWrapper } from '@tiptap/vue-3';
 import { useStorage, watchDebounced } from '@vueuse/core';
 import { computed, onMounted, ref, watch } from 'vue';
+import { translate as t } from '../../translation';
 import { getMermaid, getMermaidThemeConfig } from './mermaid-loader.js';
 
 const props = defineProps({
@@ -60,9 +61,7 @@ function cleanErrorMessage(error) {
 	const message = error?.message || String(error || '');
 	// Mermaid prefixes parse errors with a noisy multi-line banner; keep the
 	// first meaningful line so the inline hint stays compact.
-	return (
-		message.split('\n').find((line) => line.trim()) || 'Invalid Mermaid syntax.'
-	);
+	return message.split('\n').find((line) => line.trim()) || t('Invalid Mermaid syntax.');
 }
 
 async function renderPreview() {
@@ -119,8 +118,6 @@ async function renderPreview() {
 	}
 }
 
-// Debounce edits so we don't re-render on every keystroke, but re-render
-// immediately when the theme flips.
 watchDebounced(code, renderPreview, { debounce: 300, maxWait: 1000 });
 watch(userTheme, renderPreview);
 
@@ -135,10 +132,10 @@ onMounted(renderPreview);
 	>
 		<div v-if="lastGoodSvg" class="mermaid-figure-svg" v-html="lastGoodSvg" />
 		<div v-else-if="isRendering" class="mermaid-figure-placeholder">
-			Rendering…
+			{{ __('Rendering…') }}
 		</div>
 		<div v-else class="mermaid-figure-error">
-			{{ errorMessage || 'Unable to render this diagram.' }}
+			{{ errorMessage || __('Unable to render this diagram.') }}
 		</div>
 	</NodeViewWrapper>
 
@@ -151,7 +148,7 @@ onMounted(renderPreview);
 		<div class="mermaid-block-header">
 			<span class="mermaid-block-title">
 				<span class="lucide-network mermaid-block-title-icon" aria-hidden="true" />
-				Mermaid diagram
+				{{ __('Mermaid diagram') }}
 			</span>
 			<div class="mermaid-block-actions">
 				<a
@@ -159,14 +156,14 @@ onMounted(renderPreview);
 					href="https://github.com/mermaid-js/mermaid"
 					target="_blank"
 					rel="noopener noreferrer"
-					title="Learn about Mermaid"
+					:title="__('Learn about Mermaid')"
 				>
 					<span class="lucide-circle-help mermaid-block-action-icon" aria-hidden="true" />
 				</a>
 				<button
 					type="button"
 					class="mermaid-block-action mermaid-block-delete"
-					title="Remove diagram"
+					:title="__('Remove diagram')"
 					@click="deleteNode()"
 				>
 					<span class="lucide-trash-2 mermaid-block-action-icon" aria-hidden="true" />
@@ -193,10 +190,10 @@ onMounted(renderPreview);
 						v-html="lastGoodSvg"
 					/>
 					<div v-else-if="isRendering" class="mermaid-block-placeholder">
-						Rendering…
+						{{ __('Rendering…') }}
 					</div>
 					<div v-else class="mermaid-block-placeholder">
-						Start typing Mermaid to preview your diagram.
+						{{ __('Start typing Mermaid to preview your diagram.') }}
 					</div>
 				</div>
 				<div v-if="errorMessage" class="mermaid-block-error" role="alert">
@@ -208,8 +205,6 @@ onMounted(renderPreview);
 </template>
 
 <style scoped>
-/* Read-only render (CR preview / published viewer): a centered figure on a
-   soft surface, mirroring the public page's .prose pre.mermaid styling. */
 .mermaid-figure {
 	display: flex;
 	justify-content: center;
@@ -344,8 +339,6 @@ onMounted(renderPreview);
 	tab-size: 2;
 }
 
-/* Kill the global form focus ring (a blue box-shadow from @tailwindcss/forms);
-   the pane already reads as focused via the caret + active editing. */
 .mermaid-block-code:focus,
 .mermaid-block-code:focus-visible {
 	outline: none;
