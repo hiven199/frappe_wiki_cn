@@ -6,6 +6,21 @@ from frappe.translate import get_all_translations
 CONVERTIBLE_IMAGE_EXTENSIONS = (".png", ".jpeg", ".jpg")
 
 
+def _get_effective_language() -> str:
+	"""Resolve the language used by the Wiki SPA.
+
+	Frappe users are allowed to leave ``User.language`` unset and inherit the
+	site language. The SPA must follow that same contract instead of passing
+	``None`` to the translation loader and silently rendering English source
+	strings.
+	"""
+	language = None
+	if frappe.session.user != "Guest":
+		language = frappe.db.get_value("User", frappe.session.user, "language")
+
+	return language or frappe.db.get_single_value("System Settings", "language") or "en"
+
+
 @frappe.whitelist()
 def get_space_capabilities(space: str) -> dict:
 	"""Return the current user's read/write capabilities for a Wiki Space.
@@ -41,18 +56,13 @@ def get_user_info() -> dict:
 		"user_image": user.user_image,
 		"roles": user.roles,
 		"brand_image": frappe.get_single_value("Website Settings", "banner_image"),
-		"language": user.language,
+		"language": _get_effective_language(),
 	}
 
 
 @frappe.whitelist(allow_guest=True)
 def get_translations():
-	if frappe.session.user != "Guest":
-		language = frappe.db.get_value("User", frappe.session.user, "language")
-	else:
-		language = frappe.db.get_single_value("System Settings", "language")
-
-	return get_all_translations(language)
+	return get_all_translations(_get_effective_language())
 
 
 def _to_webp(path_or_url: str) -> str:
