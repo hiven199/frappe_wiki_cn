@@ -172,7 +172,7 @@
    "read_only": 1
   },
   {
-   "default": "Home",
+   "default": "首页",
    "description": "Label for the synthetic Home tab that leads the space's tab bar.",
    "fieldname": "home_tab_title",
    "fieldtype": "Data",
