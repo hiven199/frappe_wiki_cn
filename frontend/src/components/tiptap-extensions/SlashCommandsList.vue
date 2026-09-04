@@ -35,7 +35,7 @@
             v-else
             class="slash-commands-empty px-3 py-1.5 text-sm text-ink-gray-5"
         >
-            No commands found
+            {{ __('No commands found') }}
         </div>
     </div>
 </template>
