@@ -64,6 +64,11 @@ requireMatch(
 	/get\s+group\(\)\s*\{[\s\S]*?translate\(group\)/,
 	'lazy localized slash-command groups',
 );
+requireMatch(
+	'frontend/src/components/tiptap-extensions/SlashCommandsList.vue',
+	/import\s+\{\s*translate\s+as\s+t\s*\}/,
+	'standalone slash popup translator import',
+);
 forbidMatch(
 	'frontend/src/components/tiptap-extensions/SlashCommandsList.vue',
 	/>\s*No commands found\s*</,
@@ -83,6 +88,21 @@ requireMatch(
 	'frontend/src/components/IconGrid.vue',
 	/:title=['"]__\(icon\.label\)['"]/,
 	'localized icon-picker labels',
+);
+forbidMatch(
+	'frontend/src/components/WikiEditor.vue',
+	/toast\.(?:success|error)\(\s*['"](?:Failed to upload file|Editor is not ready|Could not get content from editor)['"]/,
+	'raw WikiEditor toast bypasses i18n',
+);
+forbidMatch(
+	'frontend/src/components/WikiEditor.vue',
+	/error:\s*error\?\.message\s*\|\|\s*['"](?:Failed to upload image|Failed to upload PDF)['"]/,
+	'raw WikiEditor upload error bypasses i18n',
+);
+forbidMatch(
+	'frontend/src/components/WikiEditor.vue',
+	/placeholder:\s*['"]Type \\"\/\\" for commands, or start writing\.\.\.['"]/,
+	'raw WikiEditor placeholder bypasses i18n',
 );
 
 const visibleStringChecks = [
