@@ -6,8 +6,9 @@ export default function translationPlugin(app) {
 }
 
 export async function loadTranslations() {
-	if (window.translatedMessages) {
-		return window.translatedMessages;
+	const existing = window.translatedMessages;
+	if (existing && Object.keys(existing).length > 0) {
+		return existing;
 	}
 
 	try {
