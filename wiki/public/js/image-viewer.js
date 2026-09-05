@@ -21,6 +21,9 @@
   let active = false;
   let dragging = false;
   let movedWhileDragging = false;
+  let sourceWidth = 0;
+  let sourceHeight = 0;
+  let objectUrl = null;
   const pointers = new Map();
   let pinchDistance = 0;
 
@@ -36,11 +39,39 @@
     return stage.getBoundingClientRect();
   }
 
+  function cleanupObjectUrl() {
+    if (!objectUrl) return;
+    URL.revokeObjectURL(objectUrl);
+    objectUrl = null;
+  }
+
+  function setSourceDimensions(width, height) {
+    sourceWidth = Number.isFinite(width) && width > 0 ? width : 0;
+    sourceHeight = Number.isFinite(height) && height > 0 ? height : 0;
+    if (sourceWidth && sourceHeight) {
+      viewerImg.style.width = `${sourceWidth}px`;
+      viewerImg.style.height = `${sourceHeight}px`;
+    } else {
+      viewerImg.style.removeProperty("width");
+      viewerImg.style.removeProperty("height");
+    }
+  }
+
+  function intrinsicWidth() {
+    return sourceWidth || viewerImg.naturalWidth || 0;
+  }
+
+  function intrinsicHeight() {
+    return sourceHeight || viewerImg.naturalHeight || 0;
+  }
+
   function constrainPan() {
-    if (!viewerImg.naturalWidth || !viewerImg.naturalHeight) return;
+    const width = intrinsicWidth();
+    const height = intrinsicHeight();
+    if (!width || !height) return;
     const rect = stageRect();
-    const scaledWidth = viewerImg.naturalWidth * scale;
-    const scaledHeight = viewerImg.naturalHeight * scale;
+    const scaledWidth = width * scale;
+    const scaledHeight = height * scale;
     const maxX = Math.max(0, (scaledWidth - rect.width) / 2);
     const maxY = Math.max(0, (scaledHeight - rect.height) / 2);
     panX = clamp(panX, -maxX, maxX);
@@ -55,15 +86,13 @@
   }
 
   function calculateFitScale() {
-    if (!viewerImg.naturalWidth || !viewerImg.naturalHeight) return 1;
+    const width = intrinsicWidth();
+    const height = intrinsicHeight();
+    if (!width || !height) return 1;
     const rect = stageRect();
     const availableWidth = Math.max(1, rect.width - FIT_PADDING_X);
     const availableHeight = Math.max(1, rect.height - FIT_PADDING_Y);
-    return Math.min(
-      1,
-      availableWidth / viewerImg.naturalWidth,
-      availableHeight / viewerImg.naturalHeight,
-    );
+    return Math.min(1, availableWidth / width, availableHeight / height);
   }
 
   function fitToScreen() {
@@ -117,24 +146,72 @@
     stage.style.cursor = scale > fitScale + 0.001 ? "grab" : "zoom-in";
   }
 
-  function open(sourceImg) {
+  function beginOpen(alt) {
     lastFocused = document.activeElement;
     active = true;
     viewer.classList.add("active");
     viewer.setAttribute("aria-hidden", "false");
     document.body.classList.add("image-viewer-open");
     resetPointerState();
+    viewerImg.alt = alt || "";
+    requestAnimationFrame(() => closeButton?.focus());
+  }
 
-    viewerImg.alt = sourceImg.alt || "";
+  function openImage(sourceImg) {
+    cleanupObjectUrl();
+    setSourceDimensions(sourceImg.naturalWidth, sourceImg.naturalHeight);
+    beginOpen(sourceImg.alt || "");
+
     const source = sourceImg.currentSrc || sourceImg.src;
     if (viewerImg.src !== source) {
       viewerImg.src = source;
     }
 
     if (viewerImg.complete && viewerImg.naturalWidth) {
+      if (!sourceWidth || !sourceHeight) {
+        setSourceDimensions(viewerImg.naturalWidth, viewerImg.naturalHeight);
+      }
       requestAnimationFrame(fitToScreen);
     }
-    requestAnimationFrame(() => closeButton?.focus());
+  }
+
+  function svgDimensions(svg) {
+    const viewBox = svg.viewBox?.baseVal;
+    if (viewBox && viewBox.width > 0 && viewBox.height > 0) {
+      return { width: viewBox.width, height: viewBox.height };
+    }
+
+    const width = Number.parseFloat(svg.getAttribute("width"));
+    const height = Number.parseFloat(svg.getAttribute("height"));
+    if (Number.isFinite(width) && width > 0 && Number.isFinite(height) && height > 0) {
+      return { width, height };
+    }
+
+    const rect = svg.getBoundingClientRect();
+    return {
+      width: Math.max(1, rect.width),
+      height: Math.max(1, rect.height),
+    };
+  }
+
+  function openSvg(sourceSvg) {
+    cleanupObjectUrl();
+    const { width, height } = svgDimensions(sourceSvg);
+    const clone = sourceSvg.cloneNode(true);
+    if (!clone.getAttribute("xmlns")) {
+      clone.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+    }
+    clone.setAttribute("width", String(width));
+    clone.setAttribute("height", String(height));
+
+    const serialized = new XMLSerializer().serializeToString(clone);
+    objectUrl = URL.createObjectURL(
+      new Blob([serialized], { type: "image/svg+xml;charset=utf-8" }),
+    );
+
+    setSourceDimensions(width, height);
+    beginOpen(sourceSvg.getAttribute("aria-label") || "Mermaid diagram");
+    viewerImg.src = objectUrl;
   }
 
   function close() {
@@ -155,8 +232,17 @@
       if (img.dataset.viewerBound) return;
       img.dataset.viewerBound = "true";
       img.style.cursor = "zoom-in";
-      img.addEventListener("click", () => open(img));
+      img.addEventListener("click", () => openImage(img));
     });
+
+    document
+      .querySelectorAll("#wiki-content .mermaid[data-processed] svg")
+      .forEach((svg) => {
+        if (svg.dataset.viewerBound) return;
+        svg.dataset.viewerBound = "true";
+        svg.style.cursor = "zoom-in";
+        svg.addEventListener("click", () => openSvg(svg));
+      });
   }
 
   function pointerDistance() {
@@ -175,7 +261,11 @@
   }
 
   viewerImg.addEventListener("load", () => {
-    if (isOpen()) fitToScreen();
+    if (!isOpen()) return;
+    if (!sourceWidth || !sourceHeight) {
+      setSourceDimensions(viewerImg.naturalWidth, viewerImg.naturalHeight);
+    }
+    fitToScreen();
   });
 
   toolbar.addEventListener("click", (event) => {
@@ -308,18 +398,21 @@
     if (!viewer.classList.contains("active")) {
       viewerImg.src = "";
       viewerImg.removeAttribute("style");
+      cleanupObjectUrl();
       zoomLabel.textContent = "100%";
       scale = 1;
       fitScale = 1;
       panX = 0;
       panY = 0;
+      sourceWidth = 0;
+      sourceHeight = 0;
     }
   });
 
-  // Wire up images on initial load.
+  // Wire up raster/vector images on initial load.
   attachListeners();
 
-  // Re-wire after SPA navigation replaces #wiki-content innerHTML.
+  // Re-wire after SPA navigation or Mermaid hydration replaces #wiki-content content.
   const content = document.getElementById("wiki-content");
   if (content) {
     new MutationObserver(attachListeners).observe(content, {
