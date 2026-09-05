@@ -44,6 +44,16 @@ requireMatch(
 	/const\s+navItems\s*=\s*computed\(\(\)\s*=>/,
 	'translation-aware sidebar navigation',
 );
+requireMatch(
+	'frontend/src/components/Sidebar.vue',
+	/__\(['"]Collapse['"]\)[\s\S]*?__\(['"]Expand['"]\)|__\(['"]Expand['"]\)[\s\S]*?__\(['"]Collapse['"]\)/,
+	'localized sidebar collapse/expand control',
+);
+forbidMatch(
+	'frontend/src/components/Sidebar.vue',
+	/SidebarCollapseToggle/,
+	'frappe-ui SidebarCollapseToggle hard-codes Collapse/Expand',
+);
 forbidMatch(
 	'frontend/src/components/tiptap-extensions/WikiToolbar.vue',
 	/label:\s*['"](?:Task List|Code Block|Insert Image|Insert PDF|Insert Video|Heading)['"]/,
@@ -114,7 +124,7 @@ const visibleStringChecks = [
 	[
 		'frontend/src/components/tiptap-extensions/IframeBlockView.vue',
 		/(?:>\s*Paste a URL or <iframe> embed code\.\s*<|>\s*Embed\s*<|>\s*Remove\s*<)/,
-		'raw iframe-block controls bypass i18n',
+		'raw iframe-block controls bypasses i18n',
 	],
 	[
 		'frontend/src/components/tiptap-extensions/PdfBlockView.vue',
@@ -147,14 +157,50 @@ for (const [file, pattern, description] of visibleStringChecks) {
 }
 
 requireMatch(
+	'wiki/templates/wiki/includes/header.html',
+	/\{\{\s*_\(['"]Search documentation['"]\)\s*\}\}/,
+	'localized public search trigger',
+);
+forbidMatch(
+	'wiki/templates/wiki/includes/header.html',
+	/>\s*Search documentation\s*</,
+	'raw public search label bypasses i18n',
+);
+requireMatch(
+	'wiki/templates/wiki/includes/feedback_widget.html',
+	/\{\{\s*_\(['"]Was this helpful\?['"]\)\s*\}\}/,
+	'localized public feedback prompt',
+);
+forbidMatch(
+	'wiki/templates/wiki/includes/feedback_widget.html',
+	/>\s*(?:Was this helpful\?|Submit|Thanks!)\s*</,
+	'raw public feedback UI bypasses i18n',
+);
+requireMatch(
+	'wiki/templates/wiki/includes/toc.html',
+	/\{\{\s*_\(['"]On this page['"]\)\s*\}\}/,
+	'localized public table-of-contents label',
+);
+
+requireMatch(
 	'wiki/api/__init__.py',
 	/def\s+_get_effective_language\(\)\s*->\s*str:/,
 	'User.language → System Settings language fallback',
 );
 requireMatch(
 	'wiki/patches.txt',
-	/wiki\.wiki\.doctype\.wiki_space\.patches\.cn_localize_default_seed/,
+	/wiki\.wiki\.doctype\.wiki_space\.patches\.cn_localize_default_seed(?:\s|$)/,
 	'CN starter-content migration patch registration',
+);
+requireMatch(
+	'wiki/patches.txt',
+	/wiki\.wiki\.doctype\.wiki_space\.patches\.cn_localize_default_seed_drafts/,
+	'CN starter-draft migration patch registration',
+);
+requireMatch(
+	'wiki/wiki/doctype/wiki_space/patches/cn_localize_default_seed_drafts.py',
+	/status":\s*"Draft"[\s\S]*?DEFAULT_PAGE_TITLE[\s\S]*?DEFAULT_PAGE_CONTENT/,
+	'conservative untouched starter-draft guard',
 );
 requireMatch(
 	'wiki/wiki/doctype/wiki_space/wiki_space.json',
