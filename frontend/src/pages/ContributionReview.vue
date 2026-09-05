@@ -493,7 +493,7 @@ const changeRequest = createDocumentResource({
 
 usePageMeta(() => {
 	if (!changeRequest.doc) return;
-	return { title: `${changeRequest.doc.title} | Frappe Wiki` };
+	return { title: `${changeRequest.doc.title} | Wiki` };
 });
 
 const changes = createResource({
