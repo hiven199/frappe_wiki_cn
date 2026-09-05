@@ -18,7 +18,7 @@
     "theme:generate": "node scripts/generate-public-theme.mjs && node scripts/generate-public-prose.mjs && node scripts/generate-public-lucide.mjs",
     "tailwind:watch": "yarn theme:generate && npx @tailwindcss/cli -i ./wiki/public/css/main.css -o ./wiki/public/css/tailwind.css --watch",
     "tailwind:build": "yarn theme:generate && npx @tailwindcss/cli -i ./wiki/public/css/main.css -o ./wiki/public/css/tailwind.css",
-    "test:cn-i18n": "node scripts/check-cn-i18n-foundation.mjs && node scripts/check-cn-seed.mjs && node scripts/check-cn-public-actions.mjs",
+    "test:cn-i18n": "node scripts/check-cn-i18n-foundation.mjs && node scripts/check-cn-seed.mjs && node scripts/check-cn-public-actions.mjs && node scripts/check-cn-visible-brand.mjs",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:headed": "playwright test --headed",
