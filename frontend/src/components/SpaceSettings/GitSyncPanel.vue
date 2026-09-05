@@ -267,7 +267,12 @@ function summarizeCounts(row) {
 }
 
 function firstLine(text) {
-	return (text || '').trim().split('\n').pop();
+	const line = (text || '').trim().split('\n').pop() || '';
+	const message = line.replace(
+		/^(?:[\w.]+\.)?[\w]*(?:Error|Exception):\s*/,
+		'',
+	);
+	return __(message);
 }
 
 function formatDateTime(dateStr) {
