@@ -17,18 +17,29 @@
 					:active="route.path.startsWith(router.resolve(item.to).path)"
 				/>
 			</nav>
-			<SidebarCollapseToggle class="mt-auto" />
+			<SidebarItem
+				class="mt-auto"
+				:label="isSidebarCollapsed ? __('Expand') : __('Collapse')"
+				@click="isSidebarCollapsed = !isSidebarCollapsed"
+			>
+				<template #prefix>
+					<span
+						:class="[
+							isSidebarCollapsed
+								? 'lucide-panel-right-open'
+								: 'lucide-panel-left-close',
+							'size-4 text-ink-gray-6',
+						]"
+						aria-hidden="true"
+					/>
+				</template>
+			</SidebarItem>
 		</div>
 	</Sidebar>
 </template>
 
 <script setup>
-import {
-	Sidebar,
-	SidebarCollapseToggle,
-	SidebarHeader,
-	SidebarItem,
-} from 'frappe-ui';
+import { Sidebar, SidebarHeader, SidebarItem } from 'frappe-ui';
 
 import { useSessionStore } from '@/stores/session';
 import { useUserStore } from '@/stores/user';
