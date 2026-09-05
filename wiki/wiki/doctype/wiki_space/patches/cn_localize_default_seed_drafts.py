@@ -12,8 +12,8 @@ DEFAULT_SPACE_ROUTE = "docs"
 DEFAULT_SPACE_NAME = "Wiki"
 DEFAULT_PAGE_TITLE = "Welcome to Frappe Wiki"
 DEFAULT_PAGE_CONTENT = "# Welcome to Frappe Wiki!"
-LOCALIZED_PAGE_TITLE = "欢迎使用 Frappe Wiki"
-LOCALIZED_PAGE_CONTENT = "# 欢迎使用 Frappe Wiki！"
+LOCALIZED_PAGE_TITLE = "欢迎使用 Wiki"
+LOCALIZED_PAGE_CONTENT = "# 欢迎使用 Wiki！"
 
 
 def execute():
