@@ -26,3 +26,4 @@ execute:frappe.db.set_single_value('Wiki Settings', 'auto_generate_meta_images',
 execute:from wiki.frappe_wiki.doctype.wiki_document.wiki_document import clear_wiki_content_cache; clear_wiki_content_cache() #2026-07-28-blank-lines
 wiki.wiki.doctype.wiki_space.patches.cn_localize_default_seed
 wiki.wiki.doctype.wiki_space.patches.cn_localize_default_seed_drafts
+wiki.wiki.doctype.wiki_space.patches.cn_remove_frappe_branding
