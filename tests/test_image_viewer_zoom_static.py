@@ -1,4 +1,5 @@
 from pathlib import Path
+import re
 import unittest
 
 
@@ -33,10 +34,6 @@ class TestImageViewerZoomStatic(unittest.TestCase):
             "fitToScreen",
             "actualSize",
             "zoomTo",
-            'addEventListener("wheel"',
-            'addEventListener("dblclick"',
-            'addEventListener("pointerdown"',
-            'addEventListener("pointermove"',
             "pointerDistance",
             "pointerMidpoint",
             "MAX_SCALE = 4",
@@ -47,8 +44,16 @@ class TestImageViewerZoomStatic(unittest.TestCase):
         for token in required:
             self.assertIn(token, self.viewer_js)
 
+        # Allow the listener call to wrap across lines; formatting must not make
+        # this static contract fail when the actual event wiring is present.
+        for event_name in ("wheel", "dblclick", "pointerdown", "pointermove"):
+            self.assertRegex(
+                self.viewer_js,
+                rf'addEventListener\(\s*"{re.escape(event_name)}"',
+            )
+
     def test_viewer_no_longer_closes_on_touch_move(self):
-        self.assertNotIn('addEventListener("touchmove"', self.viewer_js)
+        self.assertNotRegex(self.viewer_js, r'addEventListener\(\s*"touchmove"')
         self.assertIn('document.body.classList.add("image-viewer-open")', self.viewer_js)
         self.assertIn('document.body.classList.remove("image-viewer-open")', self.viewer_js)
 
