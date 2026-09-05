@@ -46,13 +46,23 @@ requireMatch(
 );
 requireMatch(
 	'frontend/src/components/Sidebar.vue',
-	/__\(['"]Collapse['"]\)[\s\S]*?__\(['"]Expand['"]\)|__\(['"]Expand['"]\)[\s\S]*?__\(['"]Collapse['"]\)/,
+	/__\(['"]Expand['"]\)[\s\S]*?__\(['"]Collapse['"]\)|__\(['"]Collapse['"]\)[\s\S]*?__\(['"]Expand['"]\)/,
 	'localized sidebar collapse/expand control',
 );
 forbidMatch(
 	'frontend/src/components/Sidebar.vue',
 	/SidebarCollapseToggle/,
 	'frappe-ui SidebarCollapseToggle hard-codes Collapse/Expand',
+);
+requireMatch(
+	'frontend/src/components/SpaceSettings/PermissionsPanel.vue',
+	/label:\s*__\(['"]Read['"]\),\s*value:\s*['"]Read['"]/,
+	'localized permission label preserving canonical Read value',
+);
+requireMatch(
+	'frontend/src/components/SpaceSettings/PermissionsPanel.vue',
+	/label:\s*__\(['"]Write['"]\),\s*value:\s*['"]Write['"]/,
+	'localized permission label preserving canonical Write value',
 );
 forbidMatch(
 	'frontend/src/components/tiptap-extensions/WikiToolbar.vue',
@@ -167,6 +177,21 @@ forbidMatch(
 	'raw public search label bypasses i18n',
 );
 requireMatch(
+	'wiki/templates/wiki/document.html',
+	/page_actions_dropdown\([\s\S]*?edit_text=_\(["']Edit["']\)/,
+	'localized public Edit action',
+);
+requireMatch(
+	'wiki/templates/wiki/document.html',
+	/\{\{\s*_\(['"]Last updated['"]\)\s*\}\}/,
+	'localized public Last updated label',
+);
+forbidMatch(
+	'wiki/templates/wiki/document.html',
+	/>\s*Last updated\s+\{\{/,
+	'raw public Last updated label bypasses i18n',
+);
+requireMatch(
 	'wiki/templates/wiki/includes/feedback_widget.html',
 	/\{\{\s*_\(['"]Was this helpful\?['"]\)\s*\}\}/,
 	'localized public feedback prompt',
@@ -180,6 +205,16 @@ requireMatch(
 	'wiki/templates/wiki/includes/toc.html',
 	/\{\{\s*_\(['"]On this page['"]\)\s*\}\}/,
 	'localized public table-of-contents label',
+);
+requireMatch(
+	'wiki/templates/wiki/includes/sidebar.html',
+	/const\s+lastUpdatedLabel\s*=\s*\{\{\s*_\(['"]Last updated['"]\)/,
+	'localized SPA-navigation Last updated label',
+);
+requireMatch(
+	'wiki/templates/wiki/includes/sidebar.html',
+	/const\s+onThisPageLabel\s*=\s*\{\{\s*_\(['"]On this page['"]\)/,
+	'localized SPA-navigation TOC label',
 );
 
 requireMatch(
