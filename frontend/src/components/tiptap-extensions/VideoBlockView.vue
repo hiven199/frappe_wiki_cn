@@ -61,7 +61,7 @@ const videoType = computed(() => {
                     <polygon points="23 7 16 12 23 17 23 7" />
                     <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
                 </svg>
-                <span>Video</span>
+                <span>{{ __('Video') }}</span>
             </div>
         </div>
         <div v-else class="video-container">
@@ -72,7 +72,7 @@ const videoType = computed(() => {
                 class="video-player"
             >
                 <source :src="src" :type="videoType" />
-                Your browser does not support the video tag.
+                {{ __('Your browser does not support the video tag.') }}
             </video>
         </div>
     </NodeViewWrapper>

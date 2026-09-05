@@ -39,12 +39,14 @@
 						:key="row.role"
 						class="group hover:bg-surface-gray-1"
 					>
+						<!-- Role.name is a canonical Frappe identifier. Keep the stored
+						     value untouched; only permission-level labels are localized. -->
 						<td class="truncate px-3 py-2.5 text-ink-gray-8">{{ row.role }}</td>
 						<td class="px-3 py-2.5">
 							<Select
 								v-if="canManageAccess"
 								size="sm"
-								:options="['Read', 'Write']"
+								:options="permissionOptions"
 								:modelValue="row.permission_level"
 								@update:modelValue="(val) => setPermissionLevel(idx, val)"
 							/>
@@ -53,7 +55,7 @@
 								size="sm"
 								:theme="row.permission_level === 'Write' ? 'green' : 'gray'"
 							>
-								{{ row.permission_level }}
+								{{ __(row.permission_level) }}
 							</Badge>
 						</td>
 						<td class="px-3 py-2.5 text-right">
@@ -146,6 +148,11 @@ const emit = defineEmits(['update:dirty']);
 const roleRows = ref([]);
 const savedRoles = ref([]);
 const savingRoles = ref(false);
+
+const permissionOptions = computed(() => [
+	{ label: __('Read'), value: 'Read' },
+	{ label: __('Write'), value: 'Write' },
+]);
 
 // Legacy spaces (created before this toggle) have a null column; treat as on.
 const allowContributions = ref(true);

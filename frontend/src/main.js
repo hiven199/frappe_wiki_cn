@@ -5,7 +5,7 @@ import router from './router';
 import { initSocket } from './socket';
 import { pinia } from './stores';
 
-import translationPlugin from './translation';
+import translationPlugin, { loadTranslations } from './translation';
 
 import {
 	Alert,
@@ -34,21 +34,30 @@ const globalComponents = {
 	Badge,
 };
 
-const app = createApp(App);
+async function bootstrap() {
+	setConfig('resourceFetcher', frappeRequest);
 
-setConfig('resourceFetcher', frappeRequest);
+	// Translation-aware components compute many labels during setup. Loading
+	// the dictionary before mounting prevents those one-time initializers from
+	// permanently capturing English source strings on a Chinese session.
+	await loadTranslations();
 
-app.use(pinia);
-app.use(router);
-app.use(translationPlugin);
-app.use(resourcesPlugin);
-app.use(pageMetaPlugin);
+	const app = createApp(App);
 
-const socket = initSocket();
-app.config.globalProperties.$socket = socket;
+	app.use(pinia);
+	app.use(router);
+	app.use(translationPlugin);
+	app.use(resourcesPlugin);
+	app.use(pageMetaPlugin);
 
-for (const key in globalComponents) {
-	app.component(key, globalComponents[key]);
+	const socket = initSocket();
+	app.config.globalProperties.$socket = socket;
+
+	for (const key in globalComponents) {
+		app.component(key, globalComponents[key]);
+	}
+
+	app.mount('#app');
 }
 
-app.mount('#app');
+bootstrap();

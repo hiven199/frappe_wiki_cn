@@ -71,7 +71,7 @@
 										:theme="getStatusTheme(row.status)"
 										size="sm"
 									>
-										{{ row.status }}
+										{{ changeRequestStatusLabel(row.status) }}
 									</Badge>
 									<div v-else-if="col.key === 'owner'" class="truncate text-ink-gray-6">
 										{{ row.owner }}
@@ -107,9 +107,9 @@
 										v-else
 										class="truncate"
 										:class="col.key === 'title' ? 'text-ink-gray-9' : 'text-ink-gray-7'"
-										:title="row[col.key]"
+										:title="displayCellValue(row, col)"
 									>
-										{{ row[col.key] }}
+										{{ displayCellValue(row, col) }}
 									</div>
 								</ListCell>
 							</ListRow>
@@ -132,6 +132,10 @@
 
 <script setup>
 import AssigneeAvatars from '@/components/AssigneeAvatars.vue';
+import {
+	changeRequestStatusLabel,
+	changeRequestTitleLabel,
+} from '@/lib/changeRequestDisplay';
 import { Badge, Button, Skeleton } from 'frappe-ui';
 import {
 	List,
@@ -178,6 +182,13 @@ const tracks = computed(() =>
 		typeof col.width === 'number' ? `minmax(0,${col.width}fr)` : col.width,
 	),
 );
+
+function displayCellValue(row, col) {
+	if (col.key === 'title') {
+		return changeRequestTitleLabel(row.title, row.space_name);
+	}
+	return row[col.key];
+}
 
 function getStatusTheme(status) {
 	switch (status) {

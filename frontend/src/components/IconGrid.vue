@@ -13,8 +13,8 @@
 					role="option"
 					class="flex size-8 items-center justify-center rounded text-ink-gray-7 hover:bg-surface-gray-2"
 					:class="icon.class === modelValue ? 'bg-surface-gray-3 text-ink-gray-9' : ''"
-					:title="icon.label"
-					:aria-label="icon.label"
+					:title="__(icon.label)"
+					:aria-label="__(icon.label)"
 					:aria-selected="icon.class === modelValue"
 					@click="emit('select', icon.class)"
 				>

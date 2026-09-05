@@ -80,7 +80,7 @@ function closeViewer() {
 			</div>
 			<div class="wiki-pdf-loading-body">
 				<span class="wiki-pdf-spinner" />
-				<span class="wiki-pdf-loading-text">Uploading…</span>
+				<span class="wiki-pdf-loading-text">{{ __('Uploading…') }}</span>
 			</div>
 		</div>
 
@@ -93,13 +93,13 @@ function closeViewer() {
 					v-if="isEditable"
 					type="button"
 					class="wiki-pdf-action"
-					title="Remove"
+					:title="__('Remove')"
 					@click="deleteNode"
 				>
 					<span class="lucide-trash-2 size-4" aria-hidden="true" />
 				</button>
 			</div>
-			<div class="wiki-pdf-error-body">Upload failed: {{ error }}</div>
+			<div class="wiki-pdf-error-body">{{ __('Upload failed') }}: {{ error }}</div>
 		</div>
 
 		<!-- Loaded state -->
@@ -107,14 +107,14 @@ function closeViewer() {
 			<div class="wiki-pdf-header">
 				<span class="lucide-file-text size-[18px] wiki-pdf-icon" aria-hidden="true" />
 				<span class="wiki-pdf-name">{{ filename }}</span>
-				<span v-if="pageCount" class="wiki-pdf-pages"
-					>{{ pageCount }} {{ pageCount === 1 ? 'page' : 'pages' }}</span
-				>
+				<span v-if="pageCount" class="wiki-pdf-pages">
+					{{ pageCount }} {{ __('pages') }}
+				</span>
 				<div class="wiki-pdf-actions">
 					<button
 						type="button"
 						class="wiki-pdf-action"
-						title="Open viewer"
+						:title="__('Open viewer')"
 						@click="openViewer"
 					>
 						<span class="lucide-maximize-2 size-4" aria-hidden="true" />
@@ -125,7 +125,7 @@ function closeViewer() {
 						target="_blank"
 						rel="noopener"
 						class="wiki-pdf-action"
-						title="Download"
+						:title="__('Download')"
 					>
 						<span class="lucide-download size-4" aria-hidden="true" />
 					</a>
@@ -133,7 +133,7 @@ function closeViewer() {
 						v-if="isEditable"
 						type="button"
 						class="wiki-pdf-action"
-						title="Remove"
+						:title="__('Remove')"
 						@click="deleteNode"
 					>
 						<span class="lucide-trash-2 size-4" aria-hidden="true" />
@@ -151,7 +151,7 @@ function closeViewer() {
 				/>
 				<div v-if="thumbError" class="wiki-pdf-thumb-fallback">
 					<span class="lucide-file-text size-10" aria-hidden="true" />
-					<span>Preview unavailable</span>
+					<span>{{ __('Preview unavailable') }}</span>
 				</div>
 			</div>
 		</div>

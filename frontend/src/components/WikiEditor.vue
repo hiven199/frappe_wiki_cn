@@ -57,6 +57,7 @@ import {
 	Markdown,
 	useEditor,
 } from 'frappe-ui/editor';
+import { translate as t } from '../translation';
 import LinkPopup from './tiptap-extensions/LinkPopup.vue';
 import SlashCommandsList from './tiptap-extensions/SlashCommandsList.vue';
 import WikiBubbleMenu from './tiptap-extensions/WikiBubbleMenu.vue';
@@ -149,10 +150,12 @@ async function uploadFile(file) {
 			upload_endpoint: '/api/method/wiki.api.upload_wiki_asset',
 		});
 
-		toast.success(`${isImage ? 'Image' : 'File'} uploaded successfully`);
+		toast.success(
+			isImage ? t('Image uploaded successfully') : t('File uploaded successfully'),
+		);
 		return result.file_url;
 	} catch (error) {
-		toast.error('Failed to upload file');
+		toast.error(t('Failed to upload file'));
 		throw error;
 	}
 }
@@ -218,7 +221,7 @@ async function insertAndUploadImage(file) {
 	} catch (error) {
 		updateImageNode(uploadId, {
 			loading: false,
-			error: error?.message || 'Failed to upload image',
+			error: error?.message || t('Failed to upload image'),
 		});
 	}
 }
@@ -268,7 +271,7 @@ async function insertAndUploadPdf(file) {
 	} catch (error) {
 		updatePdfNode(uploadId, {
 			loading: false,
-			error: error?.message || 'Failed to upload PDF',
+			error: error?.message || t('Failed to upload PDF'),
 		});
 	}
 }
@@ -385,7 +388,8 @@ function showLinkPopup({ editor: editorInstance, href, isNew, rect }) {
 	// Create container for the popup
 	const container = document.createElement('div');
 
-	// Create Vue app for LinkPopup
+	// LinkPopup imports the shared translator directly because this is a
+	// standalone Vue app, outside the root app's globalProperties.
 	linkPopupApp = createApp({
 		render() {
 			return h(LinkPopup, {
@@ -453,7 +457,7 @@ function createSlashCommandsSuggestion() {
 		items: ({ query }) => filterCommands(query),
 		// Suggestion dispatches onStart with `initialItems` and only delivers the
 		// real list in a follow-up onUpdate; without this the menu opens on a bare
-		// "/" showing "No commands found" until the first character is typed.
+		// "/" showing the empty state until the first character is typed.
 		initialItems: SLASH_COMMANDS,
 		render: () => {
 			let component;
@@ -463,10 +467,8 @@ function createSlashCommandsSuggestion() {
 			return {
 				onStart: (props) => {
 					isDestroyed = false;
-					// Create a container for the Vue component
 					const container = document.createElement('div');
 
-					// Create the Vue component instance
 					component = {
 						element: container,
 						props,
@@ -474,9 +476,8 @@ function createSlashCommandsSuggestion() {
 						app: null,
 					};
 
-					// Mount synchronously: onUpdate fires right after onStart with the
-					// fetched items, and it skips re-rendering while `component.app` is
-					// null — an async mount here would swallow that first update.
+					// SlashCommandsList also imports the shared translator directly,
+					// because suggestion popups are mounted as standalone Vue apps.
 					const app = createApp(SlashCommandsList, {
 						items: props.items,
 						command: props.command,
@@ -484,7 +485,6 @@ function createSlashCommandsSuggestion() {
 					component.app = app;
 					component.vm = app.mount(container);
 
-					// Create tippy popup with no default styling
 					popup = tippy('body', {
 						getReferenceClientRect: props.clientRect,
 						appendTo: () => document.body,
@@ -497,9 +497,6 @@ function createSlashCommandsSuggestion() {
 						theme: 'none',
 						arrow: false,
 						offset: [0, 4],
-						// Flip above the caret when there's no room below (e.g. the
-						// on-screen keyboard covers the lower viewport on mobile), and
-						// keep the menu within the viewport. Mirrors the bubble menu.
 						popperOptions: {
 							modifiers: [
 								{
@@ -520,7 +517,6 @@ function createSlashCommandsSuggestion() {
 				onUpdate: (props) => {
 					if (isDestroyed) return;
 
-					// Re-render with new items
 					if (component?.app) {
 						component.app.unmount();
 						const app = createApp(SlashCommandsList, {
@@ -544,7 +540,6 @@ function createSlashCommandsSuggestion() {
 						return true;
 					}
 
-					// Let the component handle arrow keys and enter
 					if (component?.vm?.onKeyDown) {
 						return component.vm.onKeyDown(props.event);
 					}
@@ -556,12 +551,10 @@ function createSlashCommandsSuggestion() {
 					if (isDestroyed) return;
 					isDestroyed = true;
 
-					// Properly unmount Vue app
 					if (component?.app) {
 						component.app.unmount();
 					}
 
-					// Destroy tippy only if it exists and hasn't been destroyed
 					if (popup && !popup.state.isDestroyed) {
 						popup.destroy();
 					}
@@ -585,8 +578,6 @@ onBeforeUnmount(() => {
 	emitContentChange({ persistImmediately: true });
 });
 
-// Seeds the editor and receives serialized markdown on every update; the
-// save flow reads normalized markdown from the editor directly instead.
 const editorContent = shallowRef(props.content || '');
 
 const editor = useEditor({
@@ -596,7 +587,6 @@ const editor = useEditor({
 	extensions: [
 		wikiStarterKit({ paragraph: false }),
 		WikiParagraph,
-		// Custom link extension with Cmd+K support
 		WikiLink.configure({
 			openOnClick: false,
 			HTMLAttributes: {
@@ -610,7 +600,6 @@ const editor = useEditor({
 			},
 		}),
 		PreserveBlankLines,
-		// Custom image extension with caption support
 		WikiImage.configure({
 			inline: false,
 			allowBase64: true,
@@ -627,10 +616,9 @@ const editor = useEditor({
 			nested: true,
 		}),
 		Placeholder.configure({
-			placeholder: 'Type "/" for commands, or start writing...',
+			placeholder: t('Type "/" for commands, or start writing...'),
 		}),
 		CodeBlock,
-		// Custom extensions
 		CalloutBlock,
 		IframeBlock,
 		MermaidBlock,
@@ -638,7 +626,6 @@ const editor = useEditor({
 		VideoBlock.configure({
 			uploadFunction: uploadFile,
 		}),
-		// Slash commands
 		SlashCommands.configure({
 			suggestion: createSlashCommandsSuggestion(),
 		}),
@@ -646,7 +633,6 @@ const editor = useEditor({
 	onUpdate: handleContentChange,
 });
 
-// useEditor doesn't take editorProps; set them on the created instance.
 editor.value.setOptions({
 	editorProps: {
 		handlePaste,
@@ -654,8 +640,6 @@ editor.value.setOptions({
 	},
 });
 
-// Typography comes from EditorContent's own `prose prose-v3` defaults; these
-// classes only hook wiki-specific rules in wiki-editor-content.css.
 const contentClass = [
 	'wiki-editor-content',
 	props.readonly ? '' : 'is-editable',
@@ -676,8 +660,6 @@ function emitContentChange(options = {}) {
 	emit('content-change', content, props.documentKey, options);
 }
 
-// The store compares editor-normalized snapshots. This keeps parser
-// round-trip differences from becoming phantom unsaved changes.
 function emitContentReady() {
 	const currentContent = getMarkdown();
 	if (currentContent === undefined) return;
@@ -710,7 +692,6 @@ function handleContentChange() {
 async function autoSave() {
 	if (!editor.value) return;
 
-	// Notify components to sync their content before we read it
 	document.dispatchEvent(new CustomEvent('wiki-editor-before-save'));
 
 	const currentContent = getMarkdown();
@@ -723,34 +704,29 @@ async function autoSave() {
 }
 
 function saveToDB() {
-	// Read-only documents (git-synced spaces) never write back.
 	if (props.readonly) return;
-	// Clear any pending autosave
 	if (autosaveTimer) {
 		clearTimeout(autosaveTimer);
 		autosaveTimer = null;
 	}
 
 	if (!editor.value) {
-		toast.error('Editor is not ready');
+		toast.error(t('Editor is not ready'));
 		return;
 	}
 
-	// Notify components to sync their content before we read it
 	document.dispatchEvent(new CustomEvent('wiki-editor-before-save'));
 
-	// Get markdown from the editor
 	const markdown = getMarkdown();
 	if (markdown !== undefined) {
 		emitContentChange();
 		if (markdown !== normalizeMarkdown(props.savedContent)) {
 			emit('save', markdown);
 		}
-		// "Save" means all of the user's work, not just this page.
 		emit('save-all');
 		document.dispatchEvent(new CustomEvent('wiki-editor-after-save'));
 	} else {
-		toast.error('Could not get content from editor');
+		toast.error(t('Could not get content from editor'));
 	}
 }
 
@@ -759,13 +735,11 @@ watch(
 	() => emitContentReady(),
 );
 
-// Expose methods for parent component
 defineExpose({
 	saveToDB,
 	getMarkdown,
 });
 
-// Keyboard shortcut: Cmd+S / Ctrl+S to save
 onKeyStroke('s', (e) => {
 	if (props.readonly) return;
 	if (e.metaKey || e.ctrlKey) {
@@ -776,28 +750,21 @@ onKeyStroke('s', (e) => {
 
 onMounted(() => {
 	emitContentReady();
-	// Expose editor on window for E2E testing
 	window.wikiEditor = editor.value;
-	// Listen for slash command image upload events
 	document.addEventListener(
 		'wiki-editor-upload-image',
 		handleSlashImageUploadEvent,
 	);
-	// Listen for PDF upload events (toolbar + slash command)
 	document.addEventListener('wiki-editor-upload-pdf', handlePdfUploadEvent);
 });
 
 onUnmounted(() => {
-	// Remove event listener
 	document.removeEventListener(
 		'wiki-editor-upload-image',
 		handleSlashImageUploadEvent,
 	);
 	document.removeEventListener('wiki-editor-upload-pdf', handlePdfUploadEvent);
-	// Hide any open link popup
 	hideLinkPopup();
-	// Clean up window reference
 	delete window.wikiEditor;
 });
 </script>
-

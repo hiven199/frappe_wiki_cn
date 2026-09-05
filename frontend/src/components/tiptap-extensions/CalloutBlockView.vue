@@ -20,6 +20,7 @@ import {
 	ref,
 	shallowRef,
 } from 'vue';
+import { translate as t } from '../../translation';
 
 const props = defineProps({
 	node: {
@@ -46,7 +47,7 @@ const normalizedType = computed(() => {
 	return type === 'warning' ? 'caution' : type;
 });
 
-// Default titles for each type
+// Keep source keys stable for stored data; translate only at presentation time.
 const defaultTitles = {
 	note: 'Note',
 	tip: 'Tip',
@@ -54,11 +55,9 @@ const defaultTitles = {
 	danger: 'Danger',
 };
 
-// Display title (custom or default)
 const displayTitle = computed(() => {
-	return (
-		props.node.attrs.title || defaultTitles[normalizedType.value] || 'Note'
-	);
+	if (props.node.attrs.title) return props.node.attrs.title;
+	return t(defaultTitles[normalizedType.value] || 'Note');
 });
 
 // SVG icons for each callout type
@@ -281,39 +280,38 @@ function changeType(newType) {
 	props.updateAttributes({ type: newType });
 }
 
-// Dropdown menu options
 const dropdownOptions = computed(() => [
 	{
-		label: 'Edit Title',
+		label: t('Edit Title'),
 		icon: 'lucide-pencil',
 		onClick: openTitleDialog,
 	},
 	{
-		label: 'Delete',
+		label: t('Delete'),
 		icon: 'trash-2',
 		onClick: () => props.deleteNode(),
 	},
 	{
-		group: 'Type',
+		group: t('Type'),
 		hideLabel: true,
 		items: [
 			{
-				label: 'Note',
+				label: t('Note'),
 				icon: 'lucide-info',
 				onClick: () => changeType('note'),
 			},
 			{
-				label: 'Tip',
+				label: t('Tip'),
 				icon: 'lucide-lightbulb',
 				onClick: () => changeType('tip'),
 			},
 			{
-				label: 'Caution',
+				label: t('Caution'),
 				icon: 'lucide-triangle-alert',
 				onClick: () => changeType('caution'),
 			},
 			{
-				label: 'Danger',
+				label: t('Danger'),
 				icon: 'lucide-shield-alert',
 				onClick: () => changeType('danger'),
 			},
@@ -340,13 +338,12 @@ const dropdownOptions = computed(() => [
         </div>
         <div class="text-sm leading-normal" @dblclick="!isEditingContent && startEditing()">
             <template v-if="isEditingContent && subEditor">
-                <!-- Inline toolbar -->
                 <div class="flex items-center gap-0.5 mb-1.5">
                     <button
                         @mousedown.prevent="toggleBold"
                         class="toolbar-btn text-[0.8125rem]"
                         :class="{ '!bg-surface-gray-3 !text-ink-gray-9': subEditor.isActive('bold') }"
-                        title="Bold (Ctrl+B)"
+                        :title="t('Bold (Ctrl+B)')"
                     >
                         <strong>B</strong>
                     </button>
@@ -354,7 +351,7 @@ const dropdownOptions = computed(() => [
                         @mousedown.prevent="toggleItalic"
                         class="toolbar-btn text-[0.8125rem]"
                         :class="{ '!bg-surface-gray-3 !text-ink-gray-9': subEditor.isActive('italic') }"
-                        title="Italic (Ctrl+I)"
+                        :title="t('Italic (Ctrl+I)')"
                     >
                         <em>I</em>
                     </button>
@@ -362,13 +359,12 @@ const dropdownOptions = computed(() => [
                         @mousedown.prevent="openLinkInput"
                         class="toolbar-btn"
                         :class="{ '!bg-surface-gray-3 !text-ink-gray-9': subEditor.isActive('link') }"
-                        title="Link"
+                        :title="t('Link')"
                     >
                         <span class="lucide-link size-3.5" aria-hidden="true" />
                     </button>
                 </div>
 
-                <!-- Link URL input row -->
                 <div v-if="showLinkInput" class="flex items-center gap-1 mb-1.5">
                     <TextInput
                         ref="linkInputRef"
@@ -380,47 +376,44 @@ const dropdownOptions = computed(() => [
                         @keydown.enter="confirmLink"
                         @keydown.escape.stop="cancelLink"
                     />
-                    <button @mousedown.prevent="confirmLink" class="toolbar-btn" title="Apply">
+                    <button @mousedown.prevent="confirmLink" class="toolbar-btn" :title="t('Apply')">
                         <span class="lucide-check size-3.5" aria-hidden="true" />
                     </button>
-                    <button @mousedown.prevent="cancelLink" class="toolbar-btn" title="Cancel">
+                    <button @mousedown.prevent="cancelLink" class="toolbar-btn" :title="t('Cancel')">
                         <span class="lucide-x size-3.5" aria-hidden="true" />
                     </button>
                 </div>
 
-                <!-- Sub-editor -->
                 <EditorContent :editor="subEditor" />
             </template>
             <div v-else class="callout-content-text text-ink-gray-7">
                 <span v-if="node.attrs.content" v-html="renderedContent"></span>
-                <span v-else class="text-ink-gray-4">Double-click to edit...</span>
+                <span v-else class="text-ink-gray-4">{{ t('Double-click to edit...') }}</span>
             </div>
         </div>
 
-        <!-- Title Edit Dialog -->
-        <Dialog v-model:open="showTitleDialog" title="Edit Callout Title">
+        <Dialog v-model:open="showTitleDialog" :title="t('Edit Callout Title')">
             <template #default>
                 <div class="space-y-4">
                     <TextInput
                         v-model="editingTitle"
-                        label="Title"
-                        placeholder="Leave empty for default title"
+                        :label="t('Title')"
+                        :placeholder="t('Leave empty for default title')"
                         @keydown.enter="saveTitle"
                     />
                     <p class="text-sm text-ink-gray-5">
-                        Default title: {{ defaultTitles[normalizedType] }}
+                        {{ t('Default title') }}: {{ t(defaultTitles[normalizedType]) }}
                     </p>
                 </div>
             </template>
             <template #actions>
-                <Button variant="solid" @click="saveTitle">Save</Button>
+                <Button variant="solid" @click="saveTitle">{{ t('Save') }}</Button>
             </template>
         </Dialog>
     </NodeViewWrapper>
 </template>
 
 <style scoped>
-/* Toolbar button base style */
 .toolbar-btn {
     display: flex;
     align-items: center;
@@ -440,13 +433,11 @@ const dropdownOptions = computed(() => [
     color: var(--ink-gray-9);
 }
 
-/* Icon sizing */
 .callout-icon :deep(svg) {
     width: 1rem;
     height: 1rem;
 }
 
-/* Sub-editor ProseMirror element styling */
 .callout-block-wrapper :deep(.callout-sub-editor-content) {
     outline: none;
     padding: 0.375rem 0.5rem;
@@ -471,7 +462,6 @@ const dropdownOptions = computed(() => [
     text-decoration: underline;
 }
 
-/* Callout type colors - these use CSS variables that don't map to Tailwind */
 .callout-note {
     background-color: var(--surface-blue-2, #dbeafe);
 }

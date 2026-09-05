@@ -38,10 +38,23 @@ const { isMobile } = useMobile();
 
 const CodeBlockItem = {
 	icon: 'lucide-square-code',
-	label: 'Code Block',
+	label: __('Code Block'),
 	action: (editor) => editor.chain().focus().toggleCodeBlock().run(),
 	isActive: (editor) => editor.isActive('codeBlock'),
 };
+
+function localizeMenuItem(item) {
+	if (!item || typeof item !== 'object') return item;
+
+	const localized = { ...item };
+	if (typeof item.label === 'string') {
+		localized.label = __(item.label);
+	}
+	if (Array.isArray(item.items)) {
+		localized.items = item.items.map(localizeMenuItem);
+	}
+	return localized;
+}
 
 const bubbleItems = [
 	Bold,
@@ -60,7 +73,7 @@ const bubbleItems = [
 	Separator,
 	Blockquote,
 	CodeBlockItem,
-];
+].map(localizeMenuItem);
 
 // Sticky toolbar height (WikiToolbar measures ~49px); pad a little above it so the
 // flip boundary clears the toolbar band with room to spare.

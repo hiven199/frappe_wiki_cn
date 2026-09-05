@@ -35,13 +35,14 @@
             v-else
             class="slash-commands-empty px-3 py-1.5 text-sm text-ink-gray-5"
         >
-            No commands found
+            {{ t('No commands found') }}
         </div>
     </div>
 </template>
 
 <script setup>
 import { computed, nextTick, onBeforeUpdate, ref, watch } from 'vue';
+import { translate as t } from '../../translation';
 
 const props = defineProps({
 	items: {
@@ -115,7 +116,6 @@ function onKeyDown(event) {
 	return false;
 }
 
-// Reset selected index when items change
 watch(
 	() => props.items,
 	() => {
@@ -123,7 +123,6 @@ watch(
 	},
 );
 
-// Expose onKeyDown for parent component
 defineExpose({
 	onKeyDown,
 });

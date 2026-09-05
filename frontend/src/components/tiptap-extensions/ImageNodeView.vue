@@ -15,11 +15,11 @@
                 <!-- Upload / optimization progress overlay -->
                 <div v-if="node.attrs.loading" class="wiki-image-loading-overlay">
                     <span class="wiki-image-spinner" />
-                    <span class="wiki-image-loading-text">Uploading…</span>
+                    <span class="wiki-image-loading-text">{{ __('Uploading…') }}</span>
                 </div>
             </div>
             <div v-if="node.attrs.error" class="wiki-image-error">
-                Upload failed: {{ node.attrs.error }}
+                {{ __('Upload failed') }}: {{ node.attrs.error }}
             </div>
             <input
                 v-if="(isEditable || node.attrs.caption) && !node.attrs.error"
@@ -28,7 +28,7 @@
                 type="text"
                 class="wiki-image-caption-input"
                 :class="{ 'has-caption': !!caption }"
-                placeholder="Add caption..."
+                :placeholder="__('Add caption...')"
                 :disabled="!isEditable"
                 @input="updateCaption"
                 @keydown="handleKeydown"

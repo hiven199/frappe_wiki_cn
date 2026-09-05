@@ -62,7 +62,7 @@ onUnmounted(() => {
 					<button
 						type="button"
 						class="wiki-pdf-modal-btn"
-						title="Zoom out"
+						:title="__('Zoom out')"
 						@click="zoomOut"
 					>
 						<span class="lucide-minus size-4" aria-hidden="true" />
@@ -71,7 +71,7 @@ onUnmounted(() => {
 					<button
 						type="button"
 						class="wiki-pdf-modal-btn"
-						title="Zoom in"
+						:title="__('Zoom in')"
 						@click="zoomIn"
 					>
 						<span class="lucide-plus size-4" aria-hidden="true" />
@@ -82,14 +82,14 @@ onUnmounted(() => {
 						target="_blank"
 						rel="noopener"
 						class="wiki-pdf-modal-btn"
-						title="Download"
+						:title="__('Download')"
 					>
 						<span class="lucide-download size-4" aria-hidden="true" />
 					</a>
 					<button
 						type="button"
 						class="wiki-pdf-modal-btn"
-						title="Close (Esc)"
+						:title="__('Close (Esc)')"
 						@click="emit('close')"
 					>
 						<span class="lucide-x size-4" aria-hidden="true" />

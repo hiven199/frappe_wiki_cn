@@ -12,8 +12,9 @@
 
 import { Extension } from '@tiptap/core';
 import Suggestion from '@tiptap/suggestion';
+import { translate } from '../../translation';
 
-export const SLASH_COMMANDS = [
+const RAW_SLASH_COMMANDS = [
 	{
 		title: 'Heading 1',
 		icon: 'lucide-heading-1',
@@ -222,18 +223,42 @@ export const SLASH_COMMANDS = [
 	},
 ];
 
+function localizeCommand(command) {
+	const { title, group, ...rest } = command;
+	return {
+		...rest,
+		titleKey: title,
+		groupKey: group,
+		get title() {
+			return translate(title);
+		},
+		get group() {
+			return translate(group);
+		},
+	};
+}
+
+// Keep translation lazy. This module can be evaluated while the main module
+// graph is loading, before the translation dictionary has been preloaded.
+// Getters resolve labels only when the slash menu actually reads them.
+export const SLASH_COMMANDS = RAW_SLASH_COMMANDS.map(localizeCommand);
+
 /**
- * Filter commands by search query. Matches the title, the group header
- * ("call" finds every callout), and any legacy keywords ("mermaid" → Diagram).
+ * Filter commands by search query. Match localized labels, their English
+ * source keys, and any legacy keywords ("mermaid" → Diagram).
  */
 export function filterCommands(query) {
 	if (!query) return SLASH_COMMANDS;
 
 	const lowerQuery = query.toLowerCase();
 	return SLASH_COMMANDS.filter((cmd) =>
-		[cmd.title, cmd.group, ...(cmd.keywords || [])].some((text) =>
-			text?.toLowerCase().includes(lowerQuery),
-		),
+		[
+			cmd.title,
+			cmd.group,
+			cmd.titleKey,
+			cmd.groupKey,
+			...(cmd.keywords || []),
+		].some((text) => text?.toLowerCase().includes(lowerQuery)),
 	);
 }
 

@@ -66,7 +66,7 @@ import { computed, ref, watch } from 'vue';
 
 const { isMobile } = useMobile();
 
-usePageMeta(() => ({ title: `${__('Change Requests')} | Frappe Wiki` }));
+usePageMeta(() => ({ title: `${__('Change Requests')} | Wiki` }));
 
 const tabQuery = useRouteQuery('tab', 'my');
 const userStore = useUserStore();

@@ -23,7 +23,7 @@
             <template v-if="isEditing">
                 <Button
                     @click="saveLink"
-                    title="Submit"
+                    :title="t('Submit')"
                     variant="subtle"
                 >
                     <template #icon>
@@ -32,7 +32,7 @@
                 </Button>
                 <Button
                     @click="cancelEdit"
-                    title="Cancel"
+                    :title="t('Cancel')"
                     variant="subtle"
                 >
                     <template #icon>
@@ -43,7 +43,7 @@
             <template v-else>
                 <Button
                     @click="copyLink"
-                    title="Copy"
+                    :title="t('Copy')"
                     variant="subtle"
                 >
                     <template #icon>
@@ -52,7 +52,7 @@
                 </Button>
                 <Button
                     @click="startEditing"
-                    title="Edit"
+                    :title="t('Edit')"
                     variant="subtle"
                 >
                     <template #icon>
@@ -61,7 +61,7 @@
                 </Button>
                 <Button
                     @click="removeLink"
-                    title="Remove"
+                    :title="t('Remove')"
                     variant="subtle"
                 >
                     <template #icon>
@@ -76,6 +76,7 @@
 <script setup>
 import { Button, TextInput, toast } from 'frappe-ui';
 import { nextTick, onMounted, ref, watch } from 'vue';
+import { translate as t } from '../../translation';
 
 const props = defineProps({
 	href: {
@@ -163,9 +164,9 @@ async function copyLink() {
 	if (currentHref.value) {
 		try {
 			await navigator.clipboard.writeText(currentHref.value);
-			toast.success('Link copied');
+			toast.success(t('Link copied'));
 		} catch {
-			toast.error('Failed to copy');
+			toast.error(t('Failed to copy'));
 		}
 	}
 }

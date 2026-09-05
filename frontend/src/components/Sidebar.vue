@@ -2,7 +2,7 @@
 	<Sidebar v-model:collapsed="isSidebarCollapsed">
 		<div class="flex h-full flex-col p-2">
 			<SidebarHeader
-				:title="__('Frappe Wiki')"
+				:title="__('Wiki')"
 				:subtitle="userStore.data?.full_name"
 				logo="/assets/wiki/images/wiki-logo.png"
 				:menu-items="headerMenuItems"
@@ -17,18 +17,29 @@
 					:active="route.path.startsWith(router.resolve(item.to).path)"
 				/>
 			</nav>
-			<SidebarCollapseToggle class="mt-auto" />
+			<SidebarItem
+				class="mt-auto"
+				:label="isSidebarCollapsed ? __('Expand') : __('Collapse')"
+				@click="isSidebarCollapsed = !isSidebarCollapsed"
+			>
+				<template #prefix>
+					<span
+						:class="[
+							isSidebarCollapsed
+								? 'lucide-panel-right-open'
+								: 'lucide-panel-left-close',
+							'size-4 text-ink-gray-6',
+						]"
+						aria-hidden="true"
+					/>
+				</template>
+			</SidebarItem>
 		</div>
 	</Sidebar>
 </template>
 
 <script setup>
-import {
-	Sidebar,
-	SidebarCollapseToggle,
-	SidebarHeader,
-	SidebarItem,
-} from 'frappe-ui';
+import { Sidebar, SidebarHeader, SidebarItem } from 'frappe-ui';
 
 import { useSessionStore } from '@/stores/session';
 import { useUserStore } from '@/stores/user';
@@ -62,14 +73,14 @@ const headerMenuItems = computed(() => [
 	{ label: __('Log out'), icon: 'lucide-log-out', onClick: logout },
 ]);
 
-const navItems = [
+const navItems = computed(() => [
 	{ label: __('Spaces'), icon: 'lucide-rocket', to: { name: 'SpaceList' } },
 	{
 		label: __('Change Requests'),
 		icon: 'lucide-git-branch',
 		to: { name: 'ChangeRequests' },
 	},
-];
+]);
 
 function logout() {
 	sessionStore.logout.submit();

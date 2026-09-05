@@ -47,6 +47,6 @@ const isSyncing = computed(() => {
 
 usePageMeta(() => {
 	if (!space.value?.doc) return;
-	return { title: `${space.value.doc.space_name} | Frappe Wiki` };
+	return { title: `${space.value.doc.space_name} | Wiki` };
 });
 </script>

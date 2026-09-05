@@ -12,10 +12,11 @@ def after_install():
 	space = frappe.new_doc("Wiki Space")
 	space.space_name = "Wiki"
 	space.route = "docs"
+	space.home_tab_title = "首页"
 	space.insert()
 
 	page = frappe.new_doc("Wiki Document")
 	page.parent_wiki_document = space.root_group
-	page.title = "Welcome to Frappe Wiki"
-	page.content = "# Welcome to Frappe Wiki!"
+	page.title = "欢迎使用 Wiki"
+	page.content = "# 欢迎使用 Wiki！"
 	page.insert()

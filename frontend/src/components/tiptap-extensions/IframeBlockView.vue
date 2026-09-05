@@ -9,6 +9,7 @@
 import { NodeViewWrapper } from '@tiptap/vue-3';
 import { Button, TextInput } from 'frappe-ui';
 import { computed, ref } from 'vue';
+import { translate as t } from '../../translation';
 import {
 	iframeAttrsFromHtml,
 	isAllowedIframeSrc,
@@ -45,8 +46,9 @@ function saveUrl() {
 
 	const normalized = normalizeEmbedUrl(raw);
 	if (!isAllowedIframeSrc(normalized)) {
-		errorMessage.value =
-			'This URL isn’t from a supported provider. Try a YouTube, Vimeo, or other embed URL.';
+		errorMessage.value = t(
+			'This URL isn’t from a supported provider. Try a YouTube, Vimeo, or other embed URL.',
+		);
 		return;
 	}
 	errorMessage.value = '';
@@ -72,7 +74,7 @@ function handleKeyDown(event) {
 		<div v-if="hasValidSrc" class="iframe-container">
 			<iframe
 				:src="src"
-				:title="node.attrs.title || 'Embedded content'"
+				:title="node.attrs.title || __('Embedded content')"
 				:allow="node.attrs.allow || 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share'"
 				:allowfullscreen="node.attrs.allowfullscreen"
 				:frameborder="node.attrs.frameborder || 0"
@@ -89,7 +91,7 @@ function handleKeyDown(event) {
 					<path d="M20 17v3a2 2 0 0 1-2 2h-3" />
 					<rect x="7" y="7" width="10" height="10" rx="1" />
 				</svg>
-				<span>Paste a URL or &lt;iframe&gt; embed code.</span>
+				<span>{{ __('Paste a URL or <iframe> embed code.') }}</span>
 			</div>
 			<TextInput
 				v-model="urlInput"
@@ -99,8 +101,8 @@ function handleKeyDown(event) {
 				@keydown="handleKeyDown"
 			/>
 			<div class="placeholder-actions">
-				<Button variant="solid" @click="saveUrl">Embed</Button>
-				<Button variant="subtle" @click="deleteNode()">Remove</Button>
+				<Button variant="solid" @click="saveUrl">{{ __('Embed') }}</Button>
+				<Button variant="subtle" @click="deleteNode()">{{ __('Remove') }}</Button>
 			</div>
 			<p v-if="errorMessage" class="placeholder-error">{{ errorMessage }}</p>
 		</div>

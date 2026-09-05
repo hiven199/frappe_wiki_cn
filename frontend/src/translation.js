@@ -1,18 +1,49 @@
-import { createResource } from 'frappe-ui';
+const TRANSLATIONS_URL = '/api/method/wiki.api.get_translations';
 
 export default function translationPlugin(app) {
 	app.config.globalProperties.__ = translate;
 	window.__ = translate;
-	if (!window.translatedMessages) fetchTranslations();
 }
 
-function format(message, replace) {
+export async function loadTranslations() {
+	const existing = window.translatedMessages;
+	if (existing && Object.keys(existing).length > 0) {
+		return existing;
+	}
+
+	try {
+		const response = await fetch(TRANSLATIONS_URL, {
+			method: 'GET',
+			credentials: 'same-origin',
+			headers: {
+				Accept: 'application/json',
+			},
+		});
+
+		if (!response.ok) {
+			throw new Error(`translation request failed with status ${response.status}`);
+		}
+
+		const payload = await response.json();
+		window.translatedMessages = payload?.message || {};
+	} catch (error) {
+		// Never strand the SPA on a translation failure. Falling back to source
+		// strings is preferable to a blank application, while logging makes the
+		// failure visible in diagnostics.
+		console.error('[Wiki i18n] Failed to preload translations.', error);
+		window.translatedMessages = {};
+	}
+
+	return window.translatedMessages;
+}
+
+function format(message, replace = []) {
 	return message.replace(/{(\d+)}/g, (match, number) =>
 		typeof replace[number] !== 'undefined' ? replace[number] : match,
 	);
 }
 
-function translate(message, replace, context = null) {
+export function translate(message, replace = [], context = null) {
 	const translatedMessages = window.translatedMessages || {};
 	let translatedMessage = '';
 
@@ -33,14 +64,4 @@ function translate(message, replace, context = null) {
 	}
 
 	return format(translatedMessage, replace);
-}
-
-function fetchTranslations() {
-	createResource({
-		url: 'wiki.api.get_translations',
-		auto: true,
-		transform: (data) => {
-			window.translatedMessages = data;
-		},
-	});
 }
