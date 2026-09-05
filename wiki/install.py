@@ -17,6 +17,6 @@ def after_install():
 
 	page = frappe.new_doc("Wiki Document")
 	page.parent_wiki_document = space.root_group
-	page.title = "欢迎使用 Frappe Wiki"
-	page.content = "# 欢迎使用 Frappe Wiki！"
+	page.title = "欢迎使用 Wiki"
+	page.content = "# 欢迎使用 Wiki！"
 	page.insert()
