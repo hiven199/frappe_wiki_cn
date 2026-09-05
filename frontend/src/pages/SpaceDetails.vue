@@ -379,15 +379,15 @@ const space = createDocumentResource({
 // live tree instead of a CR.
 const isGitSynced = computed(() => Boolean(space.doc?.git_synced));
 
-// "Pending"/"Running" are transient internal states; show one friendly label.
 function syncStatusLabel(status) {
-	return (
-		{ Pending: __('Sync in progress'), Running: __('Sync in progress') }[
-			status
-		] ||
-		status ||
-		__('Sync in progress')
-	);
+	const labels = {
+		Success: __('Sync succeeded'),
+		Error: __('Sync failed'),
+		Running: __('Sync in progress'),
+		Pending: __('Sync in progress'),
+		'No Change': __('No changes'),
+	};
+	return labels[status] || (status ? __(status) : __('Sync in progress'));
 }
 
 // Tab management is editor-only (mirrors the backend's can_manage_tabs, which

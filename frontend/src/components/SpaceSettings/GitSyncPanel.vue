@@ -246,16 +246,15 @@ function statusTheme(status) {
 	);
 }
 
-// "Pending"/"Running" are transient internal states; surface a single,
-// human-readable label. Other statuses (Success/Error/No Change) read fine.
 function statusLabel(status) {
-	return (
-		{ Pending: __('Sync in progress'), Running: __('Sync in progress') }[
-			status
-		] ||
-		status ||
-		__('Sync in progress')
-	);
+	const labels = {
+		Success: __('Sync succeeded'),
+		Error: __('Sync failed'),
+		Running: __('Sync in progress'),
+		Pending: __('Sync in progress'),
+		'No Change': __('No changes'),
+	};
+	return labels[status] || (status ? __(status) : __('Sync in progress'));
 }
 
 function summarizeCounts(row) {
@@ -268,7 +267,12 @@ function summarizeCounts(row) {
 }
 
 function firstLine(text) {
-	return (text || '').trim().split('\n').pop();
+	const line = (text || '').trim().split('\n').pop() || '';
+	const message = line.replace(
+		/^(?:[\w.]+\.)?[\w]*(?:Error|Exception):\s*/,
+		'',
+	);
+	return __(message);
 }
 
 function formatDateTime(dateStr) {
