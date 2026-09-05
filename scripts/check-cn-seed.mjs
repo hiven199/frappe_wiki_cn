@@ -17,11 +17,13 @@ function forbidPattern(pattern, description) {
 }
 
 requirePattern(/space\.home_tab_title\s*=\s*["']首页["']/, 'Chinese Home seed');
-requirePattern(/page\.title\s*=\s*["']欢迎使用 Frappe Wiki["']/, 'Chinese starter title');
-requirePattern(/page\.content\s*=\s*["']# 欢迎使用 Frappe Wiki！["']/, 'Chinese starter content');
+requirePattern(/page\.title\s*=\s*["']欢迎使用 Wiki["']/, 'Chinese starter title');
+requirePattern(/page\.content\s*=\s*["']# 欢迎使用 Wiki！["']/, 'Chinese starter content');
 
 forbidPattern(/page\.title\s*=\s*["']Welcome to Frappe Wiki["']/, 'upstream English starter title must not return');
 forbidPattern(/page\.content\s*=\s*["']# Welcome to Frappe Wiki!["']/, 'upstream English starter content must not return');
+forbidPattern(/page\.title\s*=\s*["']欢迎使用 Frappe Wiki["']/, 'Frappe-prefixed CN starter title must not return');
+forbidPattern(/page\.content\s*=\s*["']# 欢迎使用 Frappe Wiki！["']/, 'Frappe-prefixed CN starter content must not return');
 forbidPattern(/space\.home_tab_title\s*=\s*["']Home["']/, 'upstream English Home seed must not return');
 
 if (failures.length) {
