@@ -97,12 +97,48 @@
             {% endblock %}
         </div>
     </div>
-    
-    <!-- Image lightbox overlay -->
+
+    <!-- Image viewer: fit-to-screen on open, then wheel/buttons/drag for detail inspection. -->
     <div id="image-viewer"
-         class="fixed inset-0 z-[9999] flex items-center justify-center cursor-zoom-out opacity-0 invisible transition-opacity duration-150 ease-in-out bg-[color-mix(in_srgb,var(--surface-base)_90%,transparent)]">
-        <img id="image-viewer-img"
-             class="min-w-[45rem] max-w-[60vw] max-h-[80vh] object-contain cursor-zoom-out max-[768px]:min-w-[100vw]" />
+         role="dialog"
+         aria-modal="true"
+         aria-hidden="true"
+         class="fixed inset-0 z-[9999] opacity-0 invisible transition-opacity duration-150 ease-in-out bg-[color-mix(in_srgb,var(--surface-base)_92%,transparent)]">
+        <div id="image-viewer-stage"
+             class="absolute inset-0 overflow-hidden touch-none select-none"
+             aria-label="{{ _('Image preview') }}">
+            <img id="image-viewer-img"
+                 alt=""
+                 draggable="false"
+                 class="absolute left-1/2 top-1/2 max-w-none max-h-none object-contain select-none" />
+        </div>
+
+        <div id="image-viewer-toolbar"
+             class="absolute right-4 top-4 z-10 flex items-center gap-1 rounded-lg border border-[var(--outline-gray-2)] bg-[var(--surface-base)]/95 p-1 shadow-lg backdrop-blur">
+            <button type="button"
+                    data-image-viewer-action="zoom-out"
+                    class="inline-flex h-8 w-8 items-center justify-center rounded-md text-lg text-[var(--ink-gray-7)] hover:bg-[var(--surface-gray-2)]"
+                    aria-label="{{ _('Zoom out') }}">−</button>
+            <span id="image-viewer-zoom"
+                  class="min-w-12 px-1 text-center text-xs tabular-nums text-[var(--ink-gray-6)]">100%</span>
+            <button type="button"
+                    data-image-viewer-action="zoom-in"
+                    class="inline-flex h-8 w-8 items-center justify-center rounded-md text-lg text-[var(--ink-gray-7)] hover:bg-[var(--surface-gray-2)]"
+                    aria-label="{{ _('Zoom in') }}">+</button>
+            <button type="button"
+                    data-image-viewer-action="actual"
+                    class="inline-flex h-8 min-w-10 items-center justify-center rounded-md px-2 text-xs font-medium text-[var(--ink-gray-7)] hover:bg-[var(--surface-gray-2)]"
+                    aria-label="{{ _('Actual size') }}">1:1</button>
+            <button type="button"
+                    data-image-viewer-action="fit"
+                    class="inline-flex h-8 min-w-10 items-center justify-center rounded-md px-2 text-xs font-medium text-[var(--ink-gray-7)] hover:bg-[var(--surface-gray-2)]"
+                    aria-label="{{ _('Fit to screen') }}">⌗</button>
+            <button id="image-viewer-close"
+                    type="button"
+                    data-image-viewer-action="close"
+                    class="inline-flex h-8 w-8 items-center justify-center rounded-md text-xl text-[var(--ink-gray-7)] hover:bg-[var(--surface-gray-2)]"
+                    aria-label="{{ _('Close') }}">×</button>
+        </div>
     </div>
 
     <!-- Wiki-owned highlight.js (highlight.js/lib/common — same language set as
