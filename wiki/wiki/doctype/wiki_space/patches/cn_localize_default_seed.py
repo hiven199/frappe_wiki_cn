@@ -6,6 +6,8 @@ DEFAULT_SPACE_NAME = "Wiki"
 DEFAULT_HOME_TAB = "Home"
 DEFAULT_PAGE_TITLE = "Welcome to Frappe Wiki"
 DEFAULT_PAGE_CONTENT = "# Welcome to Frappe Wiki!"
+LOCALIZED_PAGE_TITLE = "欢迎使用 Wiki"
+LOCALIZED_PAGE_CONTENT = "# 欢迎使用 Wiki！"
 
 
 def execute():
@@ -51,8 +53,8 @@ def execute():
 			"Wiki Document",
 			page.name,
 			{
-				"title": "欢迎使用 Frappe Wiki",
-				"content": "# 欢迎使用 Frappe Wiki！",
+				"title": LOCALIZED_PAGE_TITLE,
+				"content": LOCALIZED_PAGE_CONTENT,
 			},
 			update_modified=False,
 		)
