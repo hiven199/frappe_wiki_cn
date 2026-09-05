@@ -52,6 +52,19 @@ class TestImageViewerZoomStatic(unittest.TestCase):
                 rf'addEventListener\(\s*"{re.escape(event_name)}"',
             )
 
+    def test_viewer_supports_rendered_mermaid_svg(self):
+        required = [
+            '#wiki-content .mermaid[data-processed] svg',
+            "openSvg",
+            "svgDimensions",
+            "XMLSerializer",
+            "URL.createObjectURL",
+            'type: "image/svg+xml;charset=utf-8"',
+            "viewBox",
+        ]
+        for token in required:
+            self.assertIn(token, self.viewer_js)
+
     def test_viewer_no_longer_closes_on_touch_move(self):
         self.assertNotRegex(self.viewer_js, r'addEventListener\(\s*"touchmove"')
         self.assertIn('document.body.classList.add("image-viewer-open")', self.viewer_js)
