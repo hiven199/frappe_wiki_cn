@@ -64,6 +64,7 @@
     <!-- Hover zone -->
     <div class="w-8 h-full flex items-center justify-center">
         <button @click="$store.sidebar.toggle()"
+                aria-label="{{ _('Toggle sidebar') }}"
                 class="inline-flex items-center justify-center p-1 transition-all duration-200 cursor-pointer focus:outline-none"
                 :class="$store.sidebar.isCollapsed ? 'opacity-100' : (hovered ? 'opacity-100 scale-100' : 'opacity-0 scale-75')">
             <svg class="w-4 h-4 text-[var(--ink-gray-4)] hover:text-[var(--ink-gray-6)] transition-colors duration-200"
@@ -79,6 +80,9 @@
 <script>
     // Initialize Alpine.js stores
     document.addEventListener('alpine:init', () => {
+        const lastUpdatedLabel = {{ _('Last updated') | tojson }};
+        const onThisPageLabel = {{ _('On this page') | tojson }};
+
         // Get initial theme from localStorage, default to light
         const stored = localStorage.getItem('wiki-theme');
         const initialIsDark = stored === 'dark';
@@ -246,7 +250,7 @@
                 // Update last updated
                 const lastUpdatedEl = document.getElementById('wiki-last-updated');
                 if (lastUpdatedEl) {
-                    lastUpdatedEl.textContent = 'Last updated ' + data.last_updated;
+                    lastUpdatedEl.textContent = `${lastUpdatedLabel} ${data.last_updated}`;
                     if (data.last_updated_on) {
                         lastUpdatedEl.setAttribute('title', data.last_updated_on);
                         lastUpdatedEl.setAttribute('data-timestamp', data.last_updated_on);
@@ -303,7 +307,7 @@
                 // Keep this markup identical to includes/toc.html — the two are
                 // the server-render / SPA-render halves of the same component.
                 let html = '<nav class="sticky top-[calc(var(--wiki-chrome-h)+24px)] max-h-[calc(100vh-var(--wiki-chrome-h)-4rem)] overflow-y-auto no-scrollbar flex flex-col leading-relaxed">';
-                html += '<span class="font-medium whitespace-nowrap pl-4 pb-1 border-l border-transparent">On this page</span>';
+                html += `<span class="font-medium whitespace-nowrap pl-4 pb-1 border-l border-transparent">${escapeHtml(onThisPageLabel)}</span>`;
                 // Same rule as the Jinja half: h3s only indent when the page
                 // also has an h2 (frappe-ui docs' `h3 && h2Exists`).
                 const hasH2 = headings.some(heading => heading.level === 2);
