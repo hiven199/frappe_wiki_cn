@@ -2,7 +2,7 @@
 	<Sidebar v-model:collapsed="isSidebarCollapsed">
 		<div class="flex h-full flex-col p-2">
 			<SidebarHeader
-				:title="__('Frappe Wiki')"
+				:title="__('Wiki')"
 				:subtitle="userStore.data?.full_name"
 				logo="/assets/wiki/images/wiki-logo.png"
 				:menu-items="headerMenuItems"
