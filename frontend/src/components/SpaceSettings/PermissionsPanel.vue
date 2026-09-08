@@ -14,6 +14,7 @@
 					:options="roleOptions"
 					:placeholder="__('Search role to add')"
 					:loading="rolesLoading"
+					:filterable="false"
 					:empty-text="__('No roles found')"
 					@update:query="searchRoles"
 				/>
