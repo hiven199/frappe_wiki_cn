@@ -333,15 +333,19 @@ class TestWikiChangeRequest(FrappeTestCase):
 		self.assertIsNotNone(cr_doc.merge_revision)
 
 	def test_content_only_merge_queues_search_reindex(self):
-		"""Content-only merges write via raw db.set_value, which skips the
-		on_update hook — the merge must queue the re-index itself, or search
-		keeps serving the pre-merge content."""
-		from frappe.search.sqlite_search import index_docs_in_queue
-
-		from wiki.frappe_wiki.doctype.wiki_document.wiki_sqlite_search import WikiSQLiteSearch
+		"""Content-only merges must request re-indexing, and the Wiki-owned
+		Frappe-v16 helper must make the new content searchable."""
+		from wiki.frappe_wiki.doctype.wiki_document.wiki_sqlite_search import (
+			WikiSQLiteSearch,
+			reindex_docs,
+		)
 
 		space = create_test_wiki_space()
-		page = create_test_wiki_document(space.root_group, title="Search Page", content="staletermv1zzz")
+		page = create_test_wiki_document(
+			space.root_group,
+			title="Search Page",
+			content="staletermv1zzz",
+		)
 
 		search = WikiSQLiteSearch()
 		search.drop_index()
@@ -350,12 +354,27 @@ class TestWikiChangeRequest(FrappeTestCase):
 		cr = create_change_request(space.name, "CR Search Reindex")
 		page_key = frappe.get_value("Wiki Document", page.name, "doc_key")
 		update_cr_page(cr.name, page_key, {"content": "freshtermv2zzz"})
-		_approve_and_merge(cr.name)
 
-		index_docs_in_queue()
+		with patch(
+			"wiki.frappe_wiki.doctype.wiki_document."
+			"wiki_sqlite_search.enqueue_reindex"
+		) as enqueue_reindex:
+			_approve_and_merge(cr.name)
 
-		stale_names = [r["name"] for r in search.search("staletermv1zzz")["results"]]
-		fresh_names = [r["name"] for r in search.search("freshtermv2zzz")["results"]]
+		enqueue_reindex.assert_called_once_with([page.name])
+
+		# Execute the Wiki-owned worker helper synchronously for this regression
+		# test. Production schedules the same helper with enqueue_after_commit.
+		reindex_docs([page.name])
+
+		stale_names = [
+			r["name"]
+			for r in search.search("staletermv1zzz")["results"]
+		]
+		fresh_names = [
+			r["name"]
+			for r in search.search("freshtermv2zzz")["results"]
+		]
 		self.assertNotIn(page.name, stale_names)
 		self.assertIn(page.name, fresh_names)
 
