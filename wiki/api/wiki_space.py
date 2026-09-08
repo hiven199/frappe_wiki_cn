@@ -212,6 +212,7 @@ def reorder_wiki_documents(
 		_batch_update_sort_order(siblings_list)
 
 		# Only rebuild the tree if parent changed (structural change)
+		# For simple reorders, sort_order is sufficient
 		if parent_changed:
 			rebuild_wiki_tree()
 			# A move can change the owning space; re-stamp the moved subtree.
