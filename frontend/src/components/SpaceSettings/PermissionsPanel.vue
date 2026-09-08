@@ -14,7 +14,6 @@
 					:options="roleOptions"
 					:placeholder="__('Search role to add')"
 					:loading="rolesLoading"
-					:filterable="false"
 					:empty-text="__('No roles found')"
 					@update:query="searchRoles"
 				/>
@@ -235,8 +234,9 @@ const roleOptions = computed(() => {
 });
 
 // The server searches both canonical Role.name and the current-language label,
-// while returning { value: canonical, label: localized }. That keeps permission
-// identifiers stable and still lets a Chinese user search in Chinese.
+// while returning { value: canonical, label: localized }. The pinned Combobox
+// also matches its current query against both option.label and option.value,
+// so either language remains visible after the remote response arrives.
 let roleSearchTimer = null;
 let roleSearchRequest = 0;
 
