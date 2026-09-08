@@ -86,3 +86,9 @@ class TestRoleSearchAPI(FrappeTestCase):
 			results = search_roles(self.space.name, limit=1)
 
 		self.assertEqual(len(results), 1)
+
+	def test_requires_write_permission_on_target_space(self):
+		frappe.set_user("Guest")
+
+		with self.assertRaises(frappe.PermissionError):
+			search_roles(self.space.name, query="Wiki")
