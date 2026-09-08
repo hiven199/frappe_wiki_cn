@@ -90,33 +90,54 @@ class WikiSQLiteSearch(SQLiteSearch):
 
 
 def enqueue_reindex(docnames: list[str]):
-	"""Queue Wiki Documents for search re-indexing.
+	"""Re-index Wiki Documents after the surrounding DB transaction commits.
 
-	Merge fast paths write content with raw ``frappe.db.set_value``, which
-	skips the framework's on_update hook that normally queues the re-index —
-	without this, the search index keeps serving the pre-merge content.
+	Content-only merge paths update ``Wiki Document.content`` with raw
+	``frappe.db.set_value`` calls, so the normal document ``on_update`` search
+	hook never runs. Current Frappe v16 no longer exposes the old SQLite search
+	queue API, therefore schedule a Wiki-owned after-commit job and use
+	``SQLiteSearch.index_doc`` inside that job.
 	"""
+	docnames = list(dict.fromkeys(name for name in (docnames or []) if name))
+	if not docnames:
+		return
+
 	search = WikiSQLiteSearch()
 	if not (search.is_search_enabled() and search.index_exists()):
 		return
 
-	try:
-		for docname in docnames:
-			search.add_to_queue(f"Wiki Document:{docname}")
-	except Exception:
-		frappe.log_error(
-			title="Wiki Search Reindex Queue Error",
-			message=f"Failed to queue Wiki Documents for re-indexing: {docnames}",
-		)
+	frappe.enqueue(
+		"wiki.frappe_wiki.doctype.wiki_document.wiki_sqlite_search.reindex_docs",
+		docnames=docnames,
+		enqueue_after_commit=True,
+	)
+
+
+def reindex_docs(docnames: list[str]):
+	"""Refresh Wiki Documents in the SQLite search index, best-effort per row."""
+	docnames = list(dict.fromkeys(name for name in (docnames or []) if name))
+	if not docnames:
+		return
+
+	search = WikiSQLiteSearch()
+	if not (search.is_search_enabled() and search.index_exists()):
+		return
+
+	for docname in docnames:
+		try:
+			search.index_doc("Wiki Document", docname)
+		except Exception:
+			frappe.log_error(
+				title="Wiki Search Reindex Error",
+				message=f"Failed to re-index Wiki Document {docname}",
+			)
 
 
 def remove_doc_from_index(docname: str):
 	"""Remove a Wiki Document from the search index immediately.
 
-	The framework's index update path only *queues* a re-index (drained by a
-	5-minute scheduler job, 30 docs per run), so an unpublished page would keep
-	surfacing in search until the queue catches up. Unpublishing must take
-	effect right away, so we delete the row synchronously.
+	An unpublished page must stop surfacing in search immediately, so its row is
+	removed synchronously rather than waiting for a background refresh.
 	"""
 	search = WikiSQLiteSearch()
 	if not (search.is_search_enabled() and search.index_exists()):

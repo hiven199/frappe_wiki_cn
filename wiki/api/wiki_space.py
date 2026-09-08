@@ -1,5 +1,6 @@
 import frappe
 from frappe import _
+from frappe.translate import get_all_translations
 from frappe.utils.nestedset import get_descendants_of
 
 
@@ -9,6 +10,47 @@ def get_space_roles(space_id: str) -> list[dict]:
 	space = frappe.get_cached_doc("Wiki Space", space_id)
 	space.check_permission("read")
 	return [{"role": row.role, "permission_level": row.permission_level} for row in space.roles]
+
+
+@frappe.whitelist()
+def search_roles(space_id: str, query: str = "", limit: int | str = 50) -> list[dict]:
+	"""Search enabled Frappe roles by canonical name or localized display label.
+
+	Role.name is an authorization identifier and must never be translated in
+	storage. This endpoint therefore returns a canonical ``value`` together with
+	a localized ``label`` for the Wiki SPA. Access is restricted to users who can
+	write the target space, matching the access-control editor itself.
+	"""
+	from wiki.api import _get_effective_language
+
+	space = frappe.get_cached_doc("Wiki Space", space_id)
+	space.check_permission("write")
+
+	try:
+		page_length = int(limit)
+	except (TypeError, ValueError):
+		page_length = 50
+	page_length = max(1, min(page_length, 100))
+
+	term = str(query or "").strip().casefold()
+	translations = get_all_translations(_get_effective_language())
+	role_names = frappe.get_all(
+		"Role",
+		filters={"disabled": 0},
+		pluck="name",
+		order_by="name asc",
+	)
+
+	results = []
+	for role_name in role_names:
+		label = translations.get(role_name) or role_name
+		if term and term not in role_name.casefold() and term not in label.casefold():
+			continue
+		results.append({"value": role_name, "label": label})
+		if len(results) >= page_length:
+			break
+
+	return results
 
 
 @frappe.whitelist()
