@@ -39,9 +39,9 @@
 						:key="row.role"
 						class="group hover:bg-surface-gray-1"
 					>
-						<!-- Role.name is a canonical Frappe identifier. Keep the stored
-						     value untouched; only permission-level labels are localized. -->
-						<td class="truncate px-3 py-2.5 text-ink-gray-8">{{ row.role }}</td>
+						<!-- Role.name is a canonical Frappe authorization identifier.
+						     Translate only its display label; never mutate the stored value. -->
+						<td class="truncate px-3 py-2.5 text-ink-gray-8">{{ __(row.role) }}</td>
 						<td class="px-3 py-2.5">
 							<Select
 								v-if="canManageAccess"
@@ -126,7 +126,6 @@ import {
 	Select,
 	SettingsRow,
 	Switch,
-	createListResource,
 	createResource,
 	toast,
 } from 'frappe-ui';
@@ -179,6 +178,11 @@ const spaceCapabilities = createResource({
 	url: 'wiki.api.get_space_capabilities',
 	onSuccess: (data) => {
 		canManageAccess.value = Boolean(data?.can_write);
+		if (canManageAccess.value) {
+			loadRoleOptions('');
+		} else {
+			roleSearchResults.value = [];
+		}
 	},
 });
 
@@ -217,47 +221,51 @@ const isDirty = computed(
 watch(isDirty, (dirty) => emit('update:dirty', dirty), { immediate: true });
 
 const ROLE_PAGE_LENGTH = 50;
-const BASE_ROLE_FILTERS = [['disabled', '=', 0]];
-
-const allRoles = createListResource({
-	doctype: 'Role',
-	fields: ['name'],
-	filters: BASE_ROLE_FILTERS,
-	orderBy: 'name asc',
-	pageLength: ROLE_PAGE_LENGTH,
-	auto: true,
+const roleSearchResults = ref([]);
+const roleSearchPending = ref(false);
+const rolesLoading = computed(() => roleSearchPending.value);
+const roleSearchResource = createResource({
+	url: 'wiki.api.wiki_space.search_roles',
 });
 
 const roleOptions = computed(() => {
 	const taken = new Set(roleRows.value.map((r) => r.role));
-	return (allRoles.data || [])
-		.map((r) => r.name)
-		.filter((name) => !taken.has(name))
-		.map((name) => ({ label: name, value: name }));
+	return roleSearchResults.value.filter((option) => !taken.has(option.value));
 });
 
-// Combobox only filters the options it is handed, so the server has to be the
-// one that widens the candidate set — otherwise the picker can never see past
-// the first page of roles.
+// The server searches both canonical Role.name and the current-language label,
+// while returning { value: canonical, label: localized }. That keeps permission
+// identifiers stable and still lets a Chinese user search in Chinese.
 let roleSearchTimer = null;
-const roleSearchPending = ref(false);
-const rolesLoading = computed(
-	() => roleSearchPending.value || allRoles.list.loading,
-);
+let roleSearchRequest = 0;
+
+async function loadRoleOptions(query) {
+	const requestId = ++roleSearchRequest;
+	roleSearchPending.value = true;
+	try {
+		const data = await roleSearchResource.submit({
+			space_id: props.spaceId,
+			query: String(query || '').trim(),
+			limit: ROLE_PAGE_LENGTH,
+		});
+		if (requestId === roleSearchRequest) {
+			roleSearchResults.value = data || [];
+		}
+	} catch {
+		if (requestId === roleSearchRequest) {
+			roleSearchResults.value = [];
+		}
+	} finally {
+		if (requestId === roleSearchRequest) {
+			roleSearchPending.value = false;
+		}
+	}
+}
 
 function searchRoles(query) {
 	clearTimeout(roleSearchTimer);
 	roleSearchPending.value = true;
-	roleSearchTimer = setTimeout(() => {
-		const term = query.trim();
-		const filters = term
-			? [...BASE_ROLE_FILTERS, ['name', 'like', `%${term}%`]]
-			: [...BASE_ROLE_FILTERS];
-		allRoles.update({ filters, start: 0 });
-		allRoles.reload().finally(() => {
-			roleSearchPending.value = false;
-		});
-	}, 300);
+	roleSearchTimer = setTimeout(() => loadRoleOptions(query), 300);
 }
 
 function addRole() {
@@ -270,7 +278,10 @@ function addRole() {
 	roleCombobox.value?.reset();
 }
 
-onBeforeUnmount(() => clearTimeout(roleSearchTimer));
+onBeforeUnmount(() => {
+	clearTimeout(roleSearchTimer);
+	roleSearchRequest += 1;
+});
 
 function setPermissionLevel(idx, level) {
 	roleRows.value[idx].permission_level = level;
