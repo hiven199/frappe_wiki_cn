@@ -97,12 +97,13 @@ test.describe('Space Settings -> Permissions role search', () => {
 			.toBe('Read');
 	});
 
-	test('searches a localized label but saves the canonical role name', async ({
+	test('searches canonical and localized text but saves the canonical role name', async ({
 		page,
 		request,
 	}) => {
 		roleName = `ZZZ Wiki Finance Manager ${Date.now()}`;
 		const localizedRoleName = '维基财务经理';
+		const canonicalQuery = 'Wiki Finance';
 		const localizedQuery = '维基财务';
 		await createDoc(request, 'Role', { role_name: roleName });
 
@@ -159,13 +160,26 @@ test.describe('Space Settings -> Permissions role search', () => {
 
 		const picker = dialog.getByPlaceholder('Search role to add');
 		await expect(picker).toBeVisible();
-		await picker.fill(localizedQuery);
 
+		// An English canonical query must still show the Chinese display label.
+		// This is why Combobox client-side filtering is disabled for this remote
+		// search: the visible label does not contain the canonical query text.
+		await picker.fill(canonicalQuery);
+		await expect
+			.poll(() => submittedQueries, { timeout: 10000 })
+			.toContain(canonicalQuery);
+		let option = page.getByRole('option', {
+			name: localizedRoleName,
+			exact: true,
+		});
+		await expect(option).toBeVisible({ timeout: 10000 });
+
+		// The same option must also be discoverable using its translated label.
+		await picker.fill(localizedQuery);
 		await expect
 			.poll(() => submittedQueries, { timeout: 10000 })
 			.toContain(localizedQuery);
-
-		const option = page.getByRole('option', {
+		option = page.getByRole('option', {
 			name: localizedRoleName,
 			exact: true,
 		});
