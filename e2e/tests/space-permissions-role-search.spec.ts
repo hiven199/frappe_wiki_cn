@@ -162,8 +162,8 @@ test.describe('Space Settings -> Permissions role search', () => {
 		await expect(picker).toBeVisible();
 
 		// An English canonical query must still show the Chinese display label.
-		// This is why Combobox client-side filtering is disabled for this remote
-		// search: the visible label does not contain the canonical query text.
+		// The pinned Combobox filters against both option.value and option.label,
+		// so the canonical value keeps the translated result visible.
 		await picker.fill(canonicalQuery);
 		await expect
 			.poll(() => submittedQueries, { timeout: 10000 })
