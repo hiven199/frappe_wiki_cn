@@ -1,0 +1,85 @@
+name: Upstream Compatibility v16
+
+on:
+  push:
+    branches:
+      - version-16
+  pull_request:
+    branches:
+      - version-16
+
+concurrency:
+  group: version-16-wiki-upstream-${{ github.event.pull_request.number || github.ref_name }}
+  cancel-in-progress: true
+
+env:
+  FRAPPE_REF: v16.33.1
+
+jobs:
+  server:
+    runs-on: ubuntu-latest
+    name: Frappe 16.33.1 / Wiki 3.0.1
+
+    services:
+      redis-cache:
+        image: redis:alpine
+        ports:
+          - 13000:6379
+      redis-queue:
+        image: redis:alpine
+        ports:
+          - 11000:6379
+      mariadb:
+        image: mariadb:10.6
+        env:
+          MYSQL_ROOT_PASSWORD: root
+        ports:
+          - 3306:3306
+        options: --health-cmd="mariadb-admin ping" --health-interval=5s --health-timeout=2s --health-retries=3
+
+    steps:
+      - name: Clone
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          check-latest: true
+
+      - name: Install MariaDB Client
+        run: |
+          sudo apt update
+          sudo apt-get install mariadb-client
+
+      - name: Initialize pinned Frappe bench
+        run: |
+          pip install frappe-bench
+          bench init --frappe-branch "$FRAPPE_REF" --skip-redis-config-generation --skip-assets --python "$(which python)" ~/frappe-bench
+          mariadb --host 127.0.0.1 --port 3306 -u root -proot -e "SET GLOBAL character_set_server = 'utf8mb4'"
+          mariadb --host 127.0.0.1 --port 3306 -u root -proot -e "SET GLOBAL collation_server = 'utf8mb4_unicode_ci'"
+
+      - name: Install Wiki
+        working-directory: /home/runner/frappe-bench
+        run: |
+          bench get-app wiki $GITHUB_WORKSPACE
+          bench setup requirements --dev
+          bench new-site --db-root-password root --admin-password admin test_site
+          bench --site test_site install-app wiki
+          bench --site test_site migrate
+          bench build --app wiki
+        env:
+          CI: "Yes"
+
+      - name: Run Wiki tests
+        working-directory: /home/runner/frappe-bench
+        run: |
+          bench --site test_site set-config allow_tests true
+          bench --site test_site run-tests --app wiki
+        env:
+          TYPE: server
