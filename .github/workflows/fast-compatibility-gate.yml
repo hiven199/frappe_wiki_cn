@@ -22,16 +22,30 @@ jobs:
         with:
           fetch-depth: 0
           submodules: false
+          persist-credentials: false
 
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.14'
 
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
       - name: Python syntax gate
         run: python -m compileall -q wiki tests
 
-      - name: Wiki 3.2.1 lineage and CN seam gate
+      - name: Reject unresolved merge markers
+        run: |
+          set -euo pipefail
+          if git grep -nE '^(<<<<<<< |>>>>>>> )' -- .; then
+            echo 'Unresolved merge markers detected.' >&2
+            exit 1
+          fi
+
+      - name: Wiki 3.2.1 lineage and capability contract
         run: |
           set -euo pipefail
           test "$(python - <<'PY'
@@ -41,9 +55,13 @@ jobs:
           PY
           )" = "3.2.1"
           git merge-base --is-ancestor "$OFFICIAL_WIKI_SHA" HEAD
-          grep -Fq 'def search_roles(' wiki/api/wiki_space.py
-          grep -Fq "url: 'wiki.api.wiki_space.search_roles'" frontend/src/components/SpaceSettings/AccessPanel.vue
-          test -f wiki/frappe_wiki/doctype/wiki_document/test_wiki_sqlite_search_compat.py
+          node scripts/check-v321-capability-contracts.mjs
+          node scripts/check-cn-i18n-foundation.mjs
+          node scripts/check-cn-public-actions.mjs
+          node scripts/check-cn-seed.mjs
+          node scripts/check-cn-visible-brand.mjs
+          python tests/test_sync_status_i18n_static.py
+          python tests/test_image_viewer_zoom_static.py
 
       - name: CI policy guard
         run: |
