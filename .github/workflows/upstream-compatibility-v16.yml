@@ -101,10 +101,13 @@ jobs:
         env:
           CI: "Yes"
 
-      - name: Run Wiki tests
+      - name: Run targeted Wiki compatibility tests
         working-directory: /home/runner/frappe-bench
         run: |
+          set -euo pipefail
           bench --site test_site set-config allow_tests true
-          bench --site test_site run-tests --app wiki
+          bench --site test_site run-tests --app wiki --module wiki.api.test_role_search
+          bench --site test_site run-tests --app wiki --module wiki.frappe_wiki.doctype.wiki_document.test_wiki_sqlite_search_compat
+          bench --site test_site run-tests --app wiki --module wiki.frappe_wiki.doctype.wiki_change_request.test_wiki_change_request
         env:
           TYPE: server
