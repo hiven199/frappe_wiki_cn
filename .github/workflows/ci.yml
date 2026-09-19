@@ -19,12 +19,17 @@ on:
       - '**.css'
       - '**.ts'
 
+permissions:
+  contents: read
+
 concurrency:
   group: version-16-wiki-final-${{ github.event.number || github.ref_name }}
   cancel-in-progress: true
 
 env:
   FRAPPE_REF: v16.34.0
+  FRAPPE_COMMIT: c1f1e8ec3708750d7254f7f99d869ffb9886f19f
+  OFFICIAL_WIKI_SHA: 0c0adb06b9deb84d11d1f95e85df891c2a29f8da
 
 jobs:
   tests:
@@ -53,6 +58,21 @@ jobs:
     steps:
       - name: Clone
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: false
+          persist-credentials: false
+
+      - name: Verify Wiki 3.2.1 lineage
+        run: |
+          set -euo pipefail
+          test "$(python - <<'PY'
+          ns = {}
+          exec(open('wiki/__init__.py', encoding='utf-8').read(), ns)
+          print(ns['__version__'])
+          PY
+          )" = "3.2.1"
+          git merge-base --is-ancestor "$OFFICIAL_WIKI_SHA" HEAD
 
       - name: Find tests
         run: |
@@ -69,6 +89,17 @@ jobs:
         with:
           node-version: 24
           check-latest: true
+
+      - name: Run static capability contracts
+        run: |
+          set -euo pipefail
+          node scripts/check-v321-capability-contracts.mjs
+          node scripts/check-cn-i18n-foundation.mjs
+          node scripts/check-cn-public-actions.mjs
+          node scripts/check-cn-seed.mjs
+          node scripts/check-cn-visible-brand.mjs
+          python tests/test_sync_status_i18n_static.py
+          python tests/test_image_viewer_zoom_static.py
 
       - name: Cache pip
         uses: actions/cache@v4
@@ -96,15 +127,22 @@ jobs:
 
       - name: Setup
         run: |
+          set -euo pipefail
           pip install frappe-bench
           bench init --frappe-branch "$FRAPPE_REF" --skip-redis-config-generation --skip-assets --python "$(which python)" ~/frappe-bench
+          actual_frappe_commit="$(git -C ~/frappe-bench/apps/frappe rev-parse HEAD)"
+          if [ "$actual_frappe_commit" != "$FRAPPE_COMMIT" ]; then
+            echo "Frappe drift: expected $FRAPPE_COMMIT, got $actual_frappe_commit" >&2
+            exit 1
+          fi
           mariadb --host 127.0.0.1 --port 3306 -u root -proot -e "SET GLOBAL character_set_server = 'utf8mb4'"
           mariadb --host 127.0.0.1 --port 3306 -u root -proot -e "SET GLOBAL collation_server = 'utf8mb4_unicode_ci'"
 
       - name: Install
         working-directory: /home/runner/frappe-bench
         run: |
-          bench get-app wiki $GITHUB_WORKSPACE
+          set -euo pipefail
+          bench get-app wiki "$GITHUB_WORKSPACE"
           bench setup requirements --dev
           bench new-site --db-root-password root --admin-password admin test_site
           bench --site test_site install-app wiki
@@ -116,7 +154,15 @@ jobs:
       - name: Run Tests
         working-directory: /home/runner/frappe-bench
         run: |
+          set -euo pipefail
           bench --site test_site set-config allow_tests true
           bench --site test_site run-tests --app wiki
         env:
           TYPE: server
+
+      - name: Regression summary
+        run: |
+          echo "FRAPPE_REF=$FRAPPE_REF"
+          echo "FRAPPE_COMMIT=$FRAPPE_COMMIT"
+          echo "OFFICIAL_WIKI_SHA=$OFFICIAL_WIKI_SHA"
+          echo "WIKI_FINAL_FULL_REGRESSION=PASS"
