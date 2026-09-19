@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - version-16
+      - compat/wiki-v3.2.1-version-16
   pull_request:
     branches:
       - version-16
@@ -13,12 +14,13 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  FRAPPE_REF: v16.33.1
+  FRAPPE_REF: v16.34.0
+  OFFICIAL_WIKI_SHA: 0c0adb06b9deb84d11d1f95e85df891c2a29f8da
 
 jobs:
   server:
     runs-on: ubuntu-latest
-    name: Frappe 16.33.1 / Wiki 3.0.1
+    name: Frappe 16.34.0 / Wiki 3.2.1 CN candidate
 
     services:
       redis-cache:
@@ -40,6 +42,26 @@ jobs:
     steps:
       - name: Clone
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: false
+
+      - name: Verify exact Wiki 3.2.1 lineage and CN capability seams
+        run: |
+          set -euo pipefail
+          test "$(python - <<'PY'
+          ns = {}
+          exec(open('wiki/__init__.py', encoding='utf-8').read(), ns)
+          print(ns['__version__'])
+          PY
+          )" = "3.2.1"
+          git merge-base --is-ancestor "$OFFICIAL_WIKI_SHA" HEAD
+          grep -Fq 'def search_roles(' wiki/api/wiki_space.py
+          grep -Fq "url: 'wiki.api.wiki_space.search_roles'" frontend/src/components/SpaceSettings/AccessPanel.vue
+          grep -Fq '{{ __(row.role) }}' frontend/src/components/SpaceSettings/AccessPanel.vue
+          test -f wiki/frappe_wiki/doctype/wiki_document/test_wiki_sqlite_search_compat.py
+          test -f tests/test_sync_status_i18n_static.py
+          test -f tests/test_image_viewer_zoom_static.py
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -56,6 +78,15 @@ jobs:
         run: |
           sudo apt update
           sudo apt-get install mariadb-client
+
+      - name: Run CN static contracts
+        run: |
+          set -euo pipefail
+          python -m pytest -q tests/test_sync_status_i18n_static.py tests/test_image_viewer_zoom_static.py
+          node scripts/check-cn-i18n-foundation.mjs
+          node scripts/check-cn-public-actions.mjs
+          node scripts/check-cn-seed.mjs
+          node scripts/check-cn-visible-brand.mjs
 
       - name: Initialize pinned Frappe bench
         run: |
