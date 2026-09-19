@@ -1,14 +1,16 @@
-name: UI Tests
+name: Final Full Regression / Wiki UI
 
 on:
+  workflow_dispatch:
   push:
     branches:
-      - develop
+      - version-16
   pull_request:
-  workflow_dispatch:
+    branches:
+      - version-16
 
 concurrency:
-  group: ui-tests-wiki-${{ github.event.number || github.ref }}
+  group: version-16-wiki-ui-${{ github.event.number || github.ref_name }}
   cancel-in-progress: true
 
 jobs:
@@ -164,7 +166,6 @@ jobs:
           cat logs/*.log || true
 
   merge-reports:
-    # Merge the per-shard blob reports into a single HTML report.
     if: ${{ !cancelled() }}
     needs: ui-tests
     runs-on: ubuntu-latest
