@@ -1,0 +1,57 @@
+name: Fast Compatibility Gate
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fast-compat-wiki-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  OFFICIAL_WIKI_SHA: 0c0adb06b9deb84d11d1f95e85df891c2a29f8da
+
+jobs:
+  fast:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: false
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.14'
+
+      - name: Python syntax gate
+        run: python -m compileall -q wiki tests
+
+      - name: Wiki 3.2.1 lineage and CN seam gate
+        run: |
+          set -euo pipefail
+          test "$(python - <<'PY'
+          ns = {}
+          exec(open('wiki/__init__.py', encoding='utf-8').read(), ns)
+          print(ns['__version__'])
+          PY
+          )" = "3.2.1"
+          git merge-base --is-ancestor "$OFFICIAL_WIKI_SHA" HEAD
+          grep -Fq 'def search_roles(' wiki/api/wiki_space.py
+          grep -Fq "url: 'wiki.api.wiki_space.search_roles'" frontend/src/components/SpaceSettings/AccessPanel.vue
+          test -f wiki/frappe_wiki/doctype/wiki_document/test_wiki_sqlite_search_compat.py
+
+      - name: CI policy guard
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          text = Path('.github/workflows/upstream-compatibility-v16.yml').read_text()
+          assert 'workflow_dispatch:' in text
+          assert '\n  push:' not in text
+          assert '\n  pull_request:' not in text
+          print('FAST_COMPAT_GATE=PASS')
+          PY
