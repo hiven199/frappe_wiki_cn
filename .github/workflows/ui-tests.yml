@@ -9,9 +9,17 @@ on:
     branches:
       - version-16
 
+permissions:
+  contents: read
+
 concurrency:
   group: ui-tests-wiki-${{ github.event.number || github.ref }}
   cancel-in-progress: true
+
+env:
+  FRAPPE_REF: v16.34.0
+  FRAPPE_COMMIT: c1f1e8ec3708750d7254f7f99d869ffb9886f19f
+  OFFICIAL_WIKI_SHA: 0c0adb06b9deb84d11d1f95e85df891c2a29f8da
 
 jobs:
   ui-tests:
@@ -44,6 +52,21 @@ jobs:
     steps:
       - name: Clone
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: false
+          persist-credentials: false
+
+      - name: Verify Wiki 3.2.1 lineage
+        run: |
+          set -euo pipefail
+          test "$(python - <<'PY'
+          ns = {}
+          exec(open('wiki/__init__.py', encoding='utf-8').read(), ns)
+          print(ns['__version__'])
+          PY
+          )" = "3.2.1"
+          git merge-base --is-ancestor "$OFFICIAL_WIKI_SHA" HEAD
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -55,6 +78,11 @@ jobs:
         with:
           node-version: 24
           check-latest: true
+
+      - name: Run static capability contract
+        run: |
+          set -euo pipefail
+          node scripts/check-v321-capability-contracts.mjs
 
       - name: Add to Hosts
         run: echo "127.0.0.1 wiki.test" | sudo tee -a /etc/hosts
@@ -95,19 +123,27 @@ jobs:
 
       - name: Setup Bench
         run: |
+          set -euo pipefail
           pip install frappe-bench
-          bench init --skip-redis-config-generation --skip-assets --python "$(which python)" ~/frappe-bench
+          bench init --frappe-branch "$FRAPPE_REF" --skip-redis-config-generation --skip-assets --python "$(which python)" ~/frappe-bench
+          actual_frappe_commit="$(git -C ~/frappe-bench/apps/frappe rev-parse HEAD)"
+          if [ "$actual_frappe_commit" != "$FRAPPE_COMMIT" ]; then
+            echo "Frappe drift: expected $FRAPPE_COMMIT, got $actual_frappe_commit" >&2
+            exit 1
+          fi
           mariadb --host 127.0.0.1 --port 3306 -u root -proot -e "SET GLOBAL character_set_server = 'utf8mb4'"
           mariadb --host 127.0.0.1 --port 3306 -u root -proot -e "SET GLOBAL collation_server = 'utf8mb4_unicode_ci'"
 
       - name: Install Wiki
         working-directory: /home/runner/frappe-bench
         run: |
-          bench get-app wiki $GITHUB_WORKSPACE
+          set -euo pipefail
+          bench get-app wiki "$GITHUB_WORKSPACE"
           bench setup requirements --dev
           bench new-site --db-root-password root --admin-password admin wiki.test
           bench --site wiki.test install-app wiki
-          bench build
+          bench --site wiki.test migrate
+          bench build --app wiki
         env:
           CI: "Yes"
 
@@ -176,6 +212,8 @@ jobs:
     steps:
       - name: Clone
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Setup Node
         uses: actions/setup-node@v4
