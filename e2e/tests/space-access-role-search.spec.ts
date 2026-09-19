@@ -54,7 +54,6 @@ test.describe('Space Settings -> Access role search', () => {
 		await page.goto(space.url());
 		await page.waitForLoadState('networkidle');
 
-		// The sidebar's Settings button became a "Space actions" menu (spec 01).
 		await page.getByRole('button', { name: 'Space actions' }).click();
 		await page.getByRole('menuitem', { name: 'Space settings' }).click();
 		const dialog = page.getByRole('dialog');
@@ -97,6 +96,7 @@ test.describe('Space Settings -> Access role search', () => {
 	test('searches canonical and localized text but saves the canonical role name', async ({
 		page,
 		request,
+		wiki,
 	}) => {
 		roleName = `ZZZ Wiki Finance Manager ${Date.now()}`;
 		const localizedRoleName = '维基财务经理';
@@ -104,10 +104,7 @@ test.describe('Space Settings -> Access role search', () => {
 		const localizedQuery = '维基财务';
 		await createDoc(request, 'Role', { role_name: roleName });
 
-		const space = await createTestWikiSpace(request, {
-			route: `localized-role-search-${Date.now()}`,
-		});
-		spaceName = space.name;
+		const space = await wiki.space();
 
 		// Inject one deterministic role translation into the SPA dictionary. This
 		// keeps the rest of the application's real translations intact.
@@ -147,13 +144,14 @@ test.describe('Space Settings -> Access role search', () => {
 		);
 
 		await page.setViewportSize({ width: 1280, height: 900 });
-		await page.goto(appUrl('spaces', space.name));
+		await page.goto(space.url());
 		await page.waitForLoadState('networkidle');
 
-		await page.getByTitle('Settings').first().click();
+		await page.getByRole('button', { name: 'Space actions' }).click();
+		await page.getByRole('menuitem', { name: 'Space settings' }).click();
 		const dialog = page.getByRole('dialog');
 		await expect(dialog).toBeVisible();
-		await dialog.getByRole('tab', { name: 'Permissions', exact: true }).click();
+		await dialog.getByRole('tab', { name: 'Access', exact: true }).click();
 
 		const picker = dialog.getByPlaceholder('Search role to add');
 		await expect(picker).toBeVisible();
