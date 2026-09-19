@@ -90,13 +90,15 @@ class WikiSQLiteSearch(SQLiteSearch):
 
 
 def enqueue_reindex(docnames: list[str]):
-	"""Re-index Wiki Documents after the surrounding DB transaction commits.
+	"""Re-index Wiki Documents after a merge.
 
-	Content-only merge paths update ``Wiki Document.content`` with raw
-	``frappe.db.set_value`` calls, so the normal document ``on_update`` search
-	hook never runs. Current Frappe v16 no longer exposes the old SQLite search
-	queue API, therefore schedule a Wiki-owned after-commit job and use
-	``SQLiteSearch.index_doc`` inside that job.
+	Merge fast paths write content with raw ``frappe.db.set_value``, which
+	skips the framework's on_update hook that normally triggers the re-index,
+	so without this the search index keeps serving the pre-merge content.
+
+	Goes through ``index_doc`` rather than the framework's queue table: the
+	queue only exists on Frappe develop, while ``index_doc`` is present on
+	version-16 too (indexing inline there, queueing on develop).
 	"""
 	docnames = list(dict.fromkeys(name for name in (docnames or []) if name))
 	if not docnames:
@@ -106,31 +108,14 @@ def enqueue_reindex(docnames: list[str]):
 	if not (search.is_search_enabled() and search.index_exists()):
 		return
 
-	frappe.enqueue(
-		"wiki.frappe_wiki.doctype.wiki_document.wiki_sqlite_search.reindex_docs",
-		docnames=docnames,
-		enqueue_after_commit=True,
-	)
-
-
-def reindex_docs(docnames: list[str]):
-	"""Refresh Wiki Documents in the SQLite search index, best-effort per row."""
-	docnames = list(dict.fromkeys(name for name in (docnames or []) if name))
-	if not docnames:
-		return
-
-	search = WikiSQLiteSearch()
-	if not (search.is_search_enabled() and search.index_exists()):
-		return
-
-	for docname in docnames:
-		try:
+	try:
+		for docname in docnames:
 			search.index_doc("Wiki Document", docname)
-		except Exception:
-			frappe.log_error(
-				title="Wiki Search Reindex Error",
-				message=f"Failed to re-index Wiki Document {docname}",
-			)
+	except Exception:
+		frappe.log_error(
+			title="Wiki Search Reindex Error",
+			message=f"Failed to re-index Wiki Documents: {docnames}",
+		)
 
 
 def remove_doc_from_index(docname: str):

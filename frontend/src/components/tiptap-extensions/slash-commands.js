@@ -158,10 +158,7 @@ const RAW_SLASH_COMMANDS = [
 				.chain()
 				.focus()
 				.deleteRange(range)
-				.insertContent({
-					type: 'calloutBlock',
-					attrs: { type: 'note', title: '', content: '' },
-				})
+				.setCallout({ type: 'note' })
 				.run();
 		},
 	},
@@ -174,10 +171,7 @@ const RAW_SLASH_COMMANDS = [
 				.chain()
 				.focus()
 				.deleteRange(range)
-				.insertContent({
-					type: 'calloutBlock',
-					attrs: { type: 'tip', title: '', content: '' },
-				})
+				.setCallout({ type: 'tip' })
 				.run();
 		},
 	},
@@ -190,14 +184,7 @@ const RAW_SLASH_COMMANDS = [
 				.chain()
 				.focus()
 				.deleteRange(range)
-				.insertContent({
-					type: 'calloutBlock',
-					attrs: {
-						type: 'caution',
-						title: '',
-						content: '',
-					},
-				})
+				.setCallout({ type: 'caution' })
 				.run();
 		},
 	},
@@ -210,14 +197,7 @@ const RAW_SLASH_COMMANDS = [
 				.chain()
 				.focus()
 				.deleteRange(range)
-				.insertContent({
-					type: 'calloutBlock',
-					attrs: {
-						type: 'danger',
-						title: '',
-						content: '',
-					},
-				})
+				.setCallout({ type: 'danger' })
 				.run();
 		},
 	},
