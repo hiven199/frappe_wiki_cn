@@ -29,6 +29,7 @@ jobs:
         with:
           ref: ${{ env.TARGET_BRANCH }}
           fetch-depth: 0
+          submodules: false
 
       - name: Fetch exact official Wiki release
         run: |
@@ -51,12 +52,22 @@ jobs:
           git merge --no-ff --no-commit -X theirs "$UPSTREAM_SHA"
           RC=$?
           set -e
-          if [ "$RC" -ne 0 ]; then
+
+          # v3.2.1 intentionally deleted these legacy architecture files. They were
+          # modified by the old private branch, so Git reports modify/delete instead
+          # of letting -X theirs choose deletion. Retire them explicitly; their
+          # replacements are SpaceSidebar/LibrarySidebar and Overview respectively.
+          for legacy in frontend/src/components/Sidebar.vue frontend/src/pages/Spaces.vue; do
+            if git diff --name-only --diff-filter=U | grep -Fxq "$legacy"; then
+              git rm -f "$legacy"
+            fi
+          done
+
+          if [ -n "$(git diff --name-only --diff-filter=U)" ]; then
             echo '===== UNRESOLVED CONFLICTS ====='
             git diff --name-only --diff-filter=U
-            exit "$RC"
+            exit "${RC:-1}"
           fi
-          test -z "$(git diff --name-only --diff-filter=U)"
           git commit -m "chore: adopt official Wiki v3.2.1 architecture on version-16 candidate"
 
       - name: Structural gate
@@ -69,9 +80,12 @@ jobs:
           PY
           )" = "3.2.1"
           git diff --check HEAD^1..HEAD
+          test ! -e frontend/src/components/Sidebar.vue
+          test ! -e frontend/src/pages/Spaces.vue
           test -f frontend/src/components/SpaceSettings/AccessPanel.vue
           test -f frontend/src/components/SpaceSidebar.vue
           test -f frontend/src/components/LibrarySidebar.vue
+          test -f frontend/src/pages/Overview.vue
           test -f wiki/api/wiki_space.py
           test -f wiki/frappe_wiki/doctype/wiki_document/wiki_sqlite_search.py
 
@@ -87,6 +101,7 @@ jobs:
             echo ''
             echo "- Official exact SHA: \`$UPSTREAM_SHA\`"
             echo '- Conflict policy: official v3.2.1 wins conflicting architecture hunks.'
+            echo '- Legacy Sidebar.vue and Spaces.vue are retired in favor of the official 3.2.1 architecture.'
             echo '- Non-conflicting private changes remain; required CN capabilities are audited/reintroduced separately.'
             echo '- Production `version-16` is untouched.'
           } >> "$GITHUB_STEP_SUMMARY"
