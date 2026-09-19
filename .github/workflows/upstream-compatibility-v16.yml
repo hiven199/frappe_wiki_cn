@@ -1,16 +1,10 @@
-name: Upstream Compatibility v16
+name: App-specific Gate / Wiki 3.2.1 Compatibility
 
 on:
-  push:
-    branches:
-      - version-16
-      - compat/wiki-v3.2.1-version-16
-  pull_request:
-    branches:
-      - version-16
+  workflow_dispatch:
 
 concurrency:
-  group: version-16-wiki-upstream-${{ github.event.pull_request.number || github.ref_name }}
+  group: version-16-wiki-upstream-${{ github.ref_name }}
   cancel-in-progress: true
 
 env:
