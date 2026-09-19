@@ -1,26 +1,16 @@
-
-name: CI
+name: Final Full Regression / Wiki Server
 
 on:
+  workflow_dispatch:
   push:
     branches:
-      - develop
-      - main
-      - version-3
-    paths-ignore:
-      - '**.js'
-      - '**.vue'
-      - '**.css'
-      - '**.ts'
+      - version-16
   pull_request:
-    paths-ignore:
-      - '**.js'
-      - '**.vue'
-      - '**.css'
-      - '**.ts'
+    branches:
+      - version-16
 
 concurrency:
-  group: develop-wiki-${{ github.event.number }}
+  group: version-16-wiki-server-${{ github.event.number || github.ref_name }}
   cancel-in-progress: true
 
 jobs:
