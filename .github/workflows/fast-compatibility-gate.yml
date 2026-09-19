@@ -1,0 +1,37 @@
+name: Fast Compatibility Gate
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fast-compat-wiki-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  fast:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.14'
+
+      - name: Python syntax gate
+        run: python -m compileall -q wiki
+
+      - name: Verify compatibility workflow remains manual-only
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          text = Path('.github/workflows/upstream-compatibility-v16.yml').read_text()
+          assert 'workflow_dispatch:' in text
+          assert '\n  push:' not in text
+          assert '\n  pull_request:' not in text
+          print('FAST_COMPAT_GATE=PASS')
+          PY
