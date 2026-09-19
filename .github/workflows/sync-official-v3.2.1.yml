@@ -1,11 +1,7 @@
 name: Sync Official Wiki v3.2.1 Candidate
 
 on:
-  push:
-    branches:
-      - compat/wiki-v3.2.1-version-16
-    paths:
-      - '.github/workflows/sync-official-v3.2.1.yml'
+  workflow_dispatch:
 
 permissions:
   contents: write
