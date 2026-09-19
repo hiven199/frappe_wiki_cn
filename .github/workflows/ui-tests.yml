@@ -1,11 +1,13 @@
-name: UI Tests
+name: Final UI Regression
 
 on:
+  workflow_dispatch:
   push:
     branches:
-      - develop
+      - version-16
   pull_request:
-  workflow_dispatch:
+    branches:
+      - version-16
 
 concurrency:
   group: ui-tests-wiki-${{ github.event.number || github.ref }}
