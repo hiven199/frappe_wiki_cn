@@ -1,0 +1,92 @@
+name: Sync Official Wiki v3.2.1 Candidate
+
+on:
+  push:
+    branches:
+      - compat/wiki-v3.2.1-version-16
+    paths:
+      - '.github/workflows/sync-official-v3.2.1.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: sync-official-wiki-v3-2-1
+  cancel-in-progress: false
+
+env:
+  TARGET_BRANCH: compat/wiki-v3.2.1-version-16
+  UPSTREAM_REPO: https://github.com/frappe/wiki.git
+  UPSTREAM_REF: v3.2.1
+  UPSTREAM_SHA: 0c0adb06b9deb84d11d1f95e85df891c2a29f8da
+
+jobs:
+  capability-base:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout private version-16 candidate
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TARGET_BRANCH }}
+          fetch-depth: 0
+
+      - name: Fetch exact official Wiki release
+        run: |
+          set -euo pipefail
+          git remote add official "$UPSTREAM_REPO" || git remote set-url official "$UPSTREAM_REPO"
+          git fetch --no-tags official "refs/tags/$UPSTREAM_REF:refs/tags/$UPSTREAM_REF"
+          ACTUAL="$(git rev-parse "refs/tags/$UPSTREAM_REF^{commit}")"
+          echo "official=$ACTUAL"
+          test "$ACTUAL" = "$UPSTREAM_SHA"
+
+      - name: Merge official architecture and retain only non-conflicting private capabilities
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          # Wiki changed its navigation/settings architecture substantially in 3.2.x.
+          # Prefer official code for conflicting hunks; private capabilities are
+          # re-certified/reintroduced explicitly after this architectural merge.
+          set +e
+          git merge --no-ff --no-commit -X theirs "$UPSTREAM_SHA"
+          RC=$?
+          set -e
+          if [ "$RC" -ne 0 ]; then
+            echo '===== UNRESOLVED CONFLICTS ====='
+            git diff --name-only --diff-filter=U
+            exit "$RC"
+          fi
+          test -z "$(git diff --name-only --diff-filter=U)"
+          git commit -m "chore: adopt official Wiki v3.2.1 architecture on version-16 candidate"
+
+      - name: Structural gate
+        run: |
+          set -euo pipefail
+          test "$(python - <<'PY'
+          ns = {}
+          exec(open('wiki/__init__.py', encoding='utf-8').read(), ns)
+          print(ns['__version__'])
+          PY
+          )" = "3.2.1"
+          git diff --check HEAD^1..HEAD
+          test -f frontend/src/components/SpaceSettings/AccessPanel.vue
+          test -f frontend/src/components/SpaceSidebar.vue
+          test -f frontend/src/components/LibrarySidebar.vue
+          test -f wiki/api/wiki_space.py
+          test -f wiki/frappe_wiki/doctype/wiki_document/wiki_sqlite_search.py
+
+      - name: Push candidate architecture merge
+        run: |
+          set -euo pipefail
+          git push origin "HEAD:$TARGET_BRANCH"
+
+      - name: Summary
+        run: |
+          {
+            echo '## Wiki v3.2.1 capability migration base'
+            echo ''
+            echo "- Official exact SHA: \`$UPSTREAM_SHA\`"
+            echo '- Conflict policy: official v3.2.1 wins conflicting architecture hunks.'
+            echo '- Non-conflicting private changes remain; required CN capabilities are audited/reintroduced separately.'
+            echo '- Production `version-16` is untouched.'
+          } >> "$GITHUB_STEP_SUMMARY"
