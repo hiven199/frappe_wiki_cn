@@ -8,6 +8,7 @@ import { pinia } from './stores';
 import translationPlugin, { loadTranslations } from './translation';
 
 import {
+	Alert,
 	Badge,
 	Button,
 	Dialog,
@@ -15,6 +16,7 @@ import {
 	FormControl,
 	TextInput,
 	frappeRequest,
+	pageMetaPlugin,
 	resourcesPlugin,
 	setConfig,
 } from 'frappe-ui';
@@ -28,6 +30,7 @@ const globalComponents = {
 	FormControl,
 	ErrorMessage,
 	Dialog,
+	Alert,
 	Badge,
 };
 
@@ -39,10 +42,7 @@ async function bootstrap() {
 	// permanently capturing English source strings on a Chinese session.
 	await loadTranslations();
 
-app.use(pinia);
-app.use(router);
-app.use(translationPlugin);
-app.use(resourcesPlugin);
+	const app = createApp(App);
 
 	app.use(pinia);
 	app.use(router);
