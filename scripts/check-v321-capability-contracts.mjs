@@ -113,10 +113,20 @@ for (const token of [
 	requireText('frontend/src/components/WikiEditor.vue', token, `Wiki 3.2.1 editor seam ${token}`);
 }
 
-// The SPA bootstrap must preload translations exactly once before mounting.
+// The SPA bootstrap must preload translations exactly once before mounting and stay compatible with
+// the exact official Wiki 3.2.1 frappe-ui dependency. pageMetaPlugin is not exported by beta.55.
 requireText('frontend/src/main.js', 'await loadTranslations();', 'translation preload before mount');
 requireText('frontend/src/main.js', 'const app = createApp(App);', 'Vue app construction inside bootstrap');
-requireText('frontend/src/main.js', 'app.use(pageMetaPlugin);', 'page metadata plugin retained');
+requireText(
+	'frontend/package.json',
+	'"frappe-ui": "1.0.0-beta.55"',
+	'exact Wiki 3.2.1 frappe-ui dependency',
+);
+forbidText(
+	'frontend/src/main.js',
+	'pageMetaPlugin',
+	'pageMetaPlugin is not exported by frappe-ui 1.0.0-beta.55',
+);
 requireCount('frontend/src/main.js', 'app.use(pinia);', 1, 'Pinia plugin must be registered once');
 requireCount('frontend/src/main.js', 'app.use(router);', 1, 'router plugin must be registered once');
 requireCount(
