@@ -92,6 +92,6 @@ const emptyHint = computed(() =>
 
 usePageMeta(() => {
 	if (!spaceStore.doc) return;
-	return { title: `${spaceStore.doc.space_name} | Frappe Wiki` };
+	return { title: `${spaceStore.doc.space_name} | Wiki` };
 });
 </script>
