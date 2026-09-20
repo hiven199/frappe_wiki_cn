@@ -385,5 +385,5 @@ const emptyWikiHint = computed(() => {
 		: __('Create your first wiki space from the sidebar to get started');
 });
 
-usePageMeta(() => ({ title: `${__('All Spaces')} | Frappe Wiki` }));
+usePageMeta(() => ({ title: `${__('All Spaces')} | Wiki` }));
 </script>
