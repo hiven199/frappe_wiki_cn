@@ -40,19 +40,29 @@ forbidMatch(
 	'legacy fire-and-forget translation resource is not allowed',
 );
 requireMatch(
-	'frontend/src/components/Sidebar.vue',
-	/const\s+navItems\s*=\s*computed\(\(\)\s*=>/,
-	'translation-aware sidebar navigation',
-);
-requireMatch(
-	'frontend/src/components/Sidebar.vue',
-	/__\(['"]Expand['"]\)[\s\S]*?__\(['"]Collapse['"]\)|__\(['"]Collapse['"]\)[\s\S]*?__\(['"]Expand['"]\)/,
-	'localized sidebar collapse/expand control',
+	'frontend/src/components/LibrarySidebar.vue',
+	/const\s+navItems\s*=\s*\[[\s\S]*?label:\s*__\(['"]All Spaces['"]\)[\s\S]*?label:\s*__\(['"]Change Requests['"]\)/,
+	'translation-aware library sidebar navigation',
 );
 forbidMatch(
-	'frontend/src/components/Sidebar.vue',
+	'frontend/src/components/LibrarySidebar.vue',
 	/SidebarCollapseToggle/,
 	'frappe-ui SidebarCollapseToggle hard-codes Collapse/Expand',
+);
+requireMatch(
+	'frontend/src/components/SpaceSidebar.vue',
+	/<Sidebar\b[\s\S]*?\bdisable-collapse\b/,
+	'non-collapsible space navigation sidebar',
+);
+forbidMatch(
+	'frontend/src/components/SpaceSidebar.vue',
+	/SidebarCollapseToggle/,
+	'frappe-ui SidebarCollapseToggle hard-codes Collapse/Expand',
+);
+requireMatch(
+	'frontend/src/layouts/MainLayout.vue',
+	/<SpaceSidebar\s+v-if=['"]spaceId['"][\s\S]*?<LibrarySidebar\s+v-else\s*\/>/,
+	'v3.2.1 library/space drill-in sidebar split',
 );
 requireMatch(
 	'frontend/src/components/SpaceSettings/PermissionsPanel.vue',
