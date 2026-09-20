@@ -57,15 +57,16 @@ export const useSpaceStore = defineStore('space', () => {
 	// instead of a CR.
 	const isGitSynced = computed(() => Boolean(doc.value?.git_synced));
 
-	// "Pending"/"Running" are transient internal states; show one friendly label.
+	// Keep the sidebar badge on the same user-facing contract as GitSyncPanel.
 	function syncStatusLabel(status) {
-		return (
-			{ Pending: __('Sync in progress'), Running: __('Sync in progress') }[
-				status
-			] ||
-			status ||
-			__('Sync in progress')
-		);
+		const labels = {
+			Success: __('Sync succeeded'),
+			Error: __('Sync failed'),
+			Running: __('Sync in progress'),
+			Pending: __('Sync in progress'),
+			'No Change': __('No changes'),
+		};
+		return labels[status] || (status ? __(status) : __('Sync in progress'));
 	}
 
 	// Editing a space is gated server-side; this only hides the UI.
@@ -106,7 +107,7 @@ export const useSpaceStore = defineStore('space', () => {
 	});
 
 	// The space the loaded readonly tree belongs to. The resource holds the
-	// previous space's tree until the new one lands, so track the owner and let
+	// previous space's tree until the new fetch lands, so track the owner and let
 	// `treeData` reject a stale cross-space tree.
 	const readonlyTreeSpaceId = ref(null);
 
