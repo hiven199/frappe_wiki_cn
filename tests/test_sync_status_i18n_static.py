@@ -5,7 +5,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 PANEL = ROOT / "frontend" / "src" / "components" / "SpaceSettings" / "GitSyncPanel.vue"
-DETAILS = ROOT / "frontend" / "src" / "pages" / "SpaceDetails.vue"
+SPACE_STORE = ROOT / "frontend" / "src" / "stores" / "space.js"
 
 
 class TestWikiSyncStatusI18nStatic(unittest.TestCase):
@@ -20,8 +20,8 @@ class TestWikiSyncStatusI18nStatic(unittest.TestCase):
             self.assertIn(f"__('{msgid}')", source)
         self.assertNotIn("status ||\n\t\t__('Sync in progress')", source)
 
-    def test_space_header_localizes_same_sync_statuses(self):
-        source = DETAILS.read_text(encoding="utf-8")
+    def test_space_store_localizes_same_sync_statuses(self):
+        source = SPACE_STORE.read_text(encoding="utf-8")
         for msgid in (
             "Sync succeeded",
             "Sync failed",
@@ -29,6 +29,7 @@ class TestWikiSyncStatusI18nStatic(unittest.TestCase):
             "No changes",
         ):
             self.assertIn(f"__('{msgid}')", source)
+        self.assertIn("syncStatusLabel", source)
 
     def test_settings_error_display_strips_python_exception_prefix_before_translation(self):
         source = PANEL.read_text(encoding="utf-8")
