@@ -336,7 +336,8 @@
   {
    "fieldname": "last_sync_error",
    "fieldtype": "Small Text",
-   "label": "Last Sync Error"
+   "label": "Last Sync Error",
+   "read_only": 1
   },
   {
    "description": "The most recently loaded .wiki.json from the repo (empty when the structure is inferred).",
