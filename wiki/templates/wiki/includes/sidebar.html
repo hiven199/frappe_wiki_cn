@@ -47,6 +47,9 @@
 </div>
 
 <script>
+    const lastUpdatedLabel = {{ _('Last updated') | tojson }};
+    const onThisPageLabel = {{ _('On this page') | tojson }};
+
     // Initialize Alpine.js stores
     document.addEventListener('alpine:init', () => {
         // Same key resolution as layout.html's pre-paint script: `theme` is what
