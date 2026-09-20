@@ -227,7 +227,7 @@
    "label": "Enable Tabbed Navigation"
   },
   {
-   "default": "Home",
+   "default": "首页",
    "description": "Deprecated: tabs were removed. Kept for backwards compatibility.",
    "fieldname": "home_tab_title",
    "fieldtype": "Data",
@@ -336,8 +336,7 @@
   {
    "fieldname": "last_sync_error",
    "fieldtype": "Small Text",
-   "label": "Last Sync Error",
-   "read_only": 1
+   "label": "Last Sync Error"
   },
   {
    "description": "The most recently loaded .wiki.json from the repo (empty when the structure is inferred).",
