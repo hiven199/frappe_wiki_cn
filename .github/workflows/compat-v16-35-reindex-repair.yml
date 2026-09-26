@@ -1,0 +1,117 @@
+name: Compatibility Repair / Wiki 3.2.1 / Frappe 16.35
+
+on:
+  push:
+    branches:
+      - compat/wiki-v3.2.1-v16.35-reindex-test-fix-20260926
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: wiki-v321-frappe-v1635-reindex-repair-${{ github.ref_name }}
+  cancel-in-progress: true
+
+env:
+  FRAPPE_REF: v16.35.0
+  FRAPPE_COMMIT: 012667b9c4e7f66d5e1ff5858d2e922331d4300a
+  OFFICIAL_WIKI_SHA: 0c0adb06b9deb84d11d1f95e85df891c2a29f8da
+
+jobs:
+  targeted-server:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+
+    services:
+      redis-cache:
+        image: redis:alpine
+        ports:
+          - 13000:6379
+      redis-queue:
+        image: redis:alpine
+        ports:
+          - 11000:6379
+      mariadb:
+        image: mariadb:10.6
+        env:
+          MYSQL_ROOT_PASSWORD: root
+        ports:
+          - 3306:3306
+        options: --health-cmd="mariadb-admin ping" --health-interval=5s --health-timeout=2s --health-retries=3
+
+    steps:
+      - name: Checkout candidate
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify candidate authority
+        run: |
+          set -euo pipefail
+          test "$(python - <<'PY'
+          ns = {}
+          exec(open('wiki/__init__.py', encoding='utf-8').read(), ns)
+          print(ns['__version__'])
+          PY
+          )" = "3.2.1"
+          git merge-base --is-ancestor "$OFFICIAL_WIKI_SHA" HEAD
+          test -f wiki/frappe_wiki/doctype/wiki_change_request/wiki_change_request_test_base.py
+          grep -Fq '_test_content_only_merge_queues_search_reindex' wiki/frappe_wiki/doctype/wiki_change_request/test_wiki_change_request.py
+          grep -Fq 'enqueue_after_commit=True' wiki/frappe_wiki/doctype/wiki_document/wiki_sqlite_search.py
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          check-latest: true
+
+      - name: Install MariaDB client
+        run: |
+          sudo apt update
+          sudo apt-get install -y mariadb-client
+
+      - name: Initialize exact Frappe bench
+        run: |
+          set -euo pipefail
+          pip install frappe-bench
+          bench init --frappe-branch "$FRAPPE_REF" --skip-redis-config-generation --skip-assets --python "$(which python)" ~/frappe-bench
+          actual="$(git -C ~/frappe-bench/apps/frappe rev-parse HEAD)"
+          test "$actual" = "$FRAPPE_COMMIT"
+          mariadb --host 127.0.0.1 --port 3306 -u root -proot -e "SET GLOBAL character_set_server = 'utf8mb4'"
+          mariadb --host 127.0.0.1 --port 3306 -u root -proot -e "SET GLOBAL collation_server = 'utf8mb4_unicode_ci'"
+
+      - name: Install Wiki candidate
+        working-directory: /home/runner/frappe-bench
+        run: |
+          set -euo pipefail
+          bench get-app wiki "$GITHUB_WORKSPACE"
+          bench setup requirements --dev
+          bench new-site --db-root-password root --admin-password admin test_site
+          bench --site test_site install-app wiki
+          bench --site test_site migrate
+        env:
+          CI: "Yes"
+
+      - name: Run targeted compatibility tests
+        working-directory: /home/runner/frappe-bench
+        run: |
+          set -euo pipefail
+          bench --site test_site set-config allow_tests true
+          bench --site test_site run-tests --app wiki --module wiki.api.test_role_search
+          bench --site test_site run-tests --app wiki --module wiki.frappe_wiki.doctype.wiki_document.test_wiki_sqlite_search_compat
+          bench --site test_site run-tests --app wiki --module wiki.frappe_wiki.doctype.wiki_change_request.test_wiki_change_request
+        env:
+          TYPE: server
+
+      - name: Gate summary
+        run: |
+          echo "WIKI_V321_FRAPPE_V1635_REINDEX_REPAIR=PASS"
+          echo "FRAPPE_COMMIT=$FRAPPE_COMMIT"
+          echo "OFFICIAL_WIKI_SHA=$OFFICIAL_WIKI_SHA"
