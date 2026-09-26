@@ -41,15 +41,18 @@ jobs:
         options: --health-cmd="mariadb-admin ping" --health-interval=5s --health-timeout=2s --health-retries=3
 
     steps:
-      - name: Checkout candidate
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          persist-credentials: false
+      - name: Clone candidate without submodule traversal
+        run: |
+          set -euo pipefail
+          candidate="$RUNNER_TEMP/wiki-candidate"
+          git clone --no-recurse-submodules --branch "$GITHUB_REF_NAME" "https://github.com/$GITHUB_REPOSITORY.git" "$candidate"
+          git -C "$candidate" checkout --detach "$GITHUB_SHA"
+          test "$(git -C "$candidate" rev-parse HEAD)" = "$GITHUB_SHA"
 
       - name: Verify candidate authority
         run: |
           set -euo pipefail
+          cd "$RUNNER_TEMP/wiki-candidate"
           test "$(python - <<'PY'
           ns = {}
           exec(open('wiki/__init__.py', encoding='utf-8').read(), ns)
@@ -91,7 +94,7 @@ jobs:
         working-directory: /home/runner/frappe-bench
         run: |
           set -euo pipefail
-          bench get-app wiki "$GITHUB_WORKSPACE"
+          bench get-app wiki "$RUNNER_TEMP/wiki-candidate"
           bench setup requirements --dev
           bench new-site --db-root-password root --admin-password admin test_site
           bench --site test_site install-app wiki
