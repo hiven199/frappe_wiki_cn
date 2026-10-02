@@ -26,6 +26,11 @@ jobs:
           ref: fix/wiki-v3.2.1-runtime-closeout-repair-20261002
           fetch-depth: 0
 
+      - name: Configure commit identity
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
       - name: Patch runtime regression test and failure diagnostics
         shell: bash
         run: |
@@ -55,6 +60,8 @@ jobs:
               raise SystemExit('UI failure diagnostic anchor missing')
           ui_path.write_text(ui.replace(old_diag, new_diag, 1))
           PY
+          git add wiki/frappe_wiki/doctype/wiki_change_request/wiki_change_request_test_base.py .github/workflows/ui-tests.yml
+          git commit -m "fix(wiki): repair reindex regression and CI diagnostics"
 
       - name: Normalize private overlay with pre-commit
         shell: bash
@@ -63,18 +70,14 @@ jobs:
           python -m pip install --disable-pip-version-check pre-commit
           git merge-base --is-ancestor "$OFFICIAL_WIKI_SHA" HEAD
           pre-commit run --from-ref "$OFFICIAL_WIKI_SHA" --to-ref HEAD || true
+          git add -A
+          if ! git diff --cached --quiet; then
+            git commit -m "style(wiki): normalize private v3.2.1 overlay"
+          fi
           pre-commit run --from-ref "$OFFICIAL_WIKI_SHA" --to-ref HEAD
 
-      - name: Commit repair
+      - name: Push repair
         shell: bash
         run: |
           set -euo pipefail
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A
-          if git diff --cached --quiet; then
-            echo "No repair changes to commit."
-            exit 0
-          fi
-          git commit -m "fix(wiki): close runtime and lint regressions"
           git push origin HEAD:fix/wiki-v3.2.1-runtime-closeout-repair-20261002
