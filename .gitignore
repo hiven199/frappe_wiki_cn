@@ -25,6 +25,7 @@ test-results/
 e2e/.auth/
 .env
 screenshots/
+worktrees/
 
 # Local design tool for the generated OG card (/og_playground) — renders the
 # real template with live dials. Handy while iterating, not something to ship.
