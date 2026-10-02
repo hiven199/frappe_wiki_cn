@@ -16,7 +16,7 @@
 		<ScrollArea class="min-h-0 flex-1" viewport-class="px-2 pt-1">
 			<div class="flex flex-col gap-0.5">
 				<SidebarItem
-					v-for="item in navItems"
+					v-for="item in visibleNavItems"
 					:key="item.label"
 					:label="item.label"
 					:icon="item.icon"
@@ -82,7 +82,6 @@
 					>
 						{{ __('No Wiki Spaces') }}
 					</p>
-
 				</SidebarSection>
 			</div>
 		</ScrollArea>
@@ -141,27 +140,16 @@ const userStore = useUserStore();
 const { open: openWikiSettings } = useWikiSettings();
 const { open: openSpaceSettings } = useSpaceSettings();
 const { open: openCommandPalette } = useCommandPalette();
-
 const { themeIcon, toggleTheme } = useTheme();
-
 const showCreateDialog = ref(false);
-
-// The sidebar is a nav column, not a directory: it lists what fits at a glance
-// and defers the long tail to All Spaces. Which spaces make the cut is decided
-// by the recency order the composable now applies for both surfaces.
 const SIDEBAR_LIMIT = 100;
 
 const { spaces, orderedSpaces, restrictedSpaces, isPinned, togglePin } =
 	useSpaceLibrary({
 		limit: SIDEBAR_LIMIT,
-		// A manager's own unpublished drafts have to stay in the column they work
-		// in; for everyone else an unpublished space is not part of the wiki yet.
 		publishedOnly: computed(() => !userStore.isWikiManager),
 	});
 
-// Merged, rejected and archived requests are done, so they do not belong in
-// the sidebar count. `get_count` runs through the same permission query as the
-// list, so this is the user's own count, not the wiki's.
 const openChangeRequests = createResource({
 	url: 'frappe.client.get_count',
 	params: {
@@ -178,9 +166,7 @@ const unpublishedCollapsed = useStorage(
 
 const spaceGroups = computed(() => {
 	const published = orderedSpaces.value.filter((space) => space.is_published);
-	const unpublished = orderedSpaces.value.filter(
-		(space) => !space.is_published,
-	);
+	const unpublished = orderedSpaces.value.filter((space) => !space.is_published);
 	return [
 		{ key: 'published', label: __('Spaces'), spaces: published },
 		{ key: 'unpublished', label: __('Unpublished'), spaces: unpublished },
@@ -221,13 +207,8 @@ function pinSpace(space) {
 	);
 }
 
-// The settings dialog is mounted by SpaceDetails, so opening it from the
-// library means going there first.
 async function goToSpaceSettings(space) {
-	await router.push({
-		name: 'SpaceDetails',
-		params: { spaceId: space.name },
-	});
+	await router.push({ name: 'SpaceDetails', params: { spaceId: space.name } });
 	openSpaceSettings();
 }
 
@@ -258,17 +239,9 @@ const openChangeRequestCount = computed(() =>
 	openChangeRequests.data ? String(openChangeRequests.data) : '',
 );
 
-const navItems = computed(() => [
-	...(userStore.isWikiManager
-		? [
-				{
-					label: __('Overview'),
-					icon: 'lucide-layout-grid',
-					to: { name: 'Overview' },
-					routeNames: ['Overview'],
-				},
-			]
-		: []),
+// Keep the translation-bearing library entries as a stable static contract;
+// v3.3's manager-only Overview is layered on top without changing their labels.
+const navItems = [
 	{
 		label: __('All Spaces'),
 		icon: 'lucide-library',
@@ -282,7 +255,18 @@ const navItems = computed(() => [
 		routeNames: ['ChangeRequests', 'ChangeRequestReview'],
 		suffix: openChangeRequestCount,
 	},
-]);
+];
+
+const overviewNavItem = {
+	label: __('Overview'),
+	icon: 'lucide-layout-grid',
+	to: { name: 'Overview' },
+	routeNames: ['Overview'],
+};
+
+const visibleNavItems = computed(() =>
+	userStore.isWikiManager ? [overviewNavItem, ...navItems] : navItems,
+);
 
 function logout() {
 	sessionStore.logout.submit();
