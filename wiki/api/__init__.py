@@ -60,7 +60,9 @@ def get_user_info() -> dict:
 	}
 
 
-@frappe.whitelist(allow_guest=True)
+# Public Wiki SPA bootstrap endpoint. Reviewed: returns only the translation
+# catalogue for the effective site language and no user-specific/private data.
+@frappe.whitelist(allow_guest=True)  # nosemgrep: frappe-semgrep-rules.rules.security.guest-whitelisted-method
 def get_translations():
 	return get_all_translations(_get_effective_language())
 
