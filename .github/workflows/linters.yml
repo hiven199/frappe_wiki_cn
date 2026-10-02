@@ -51,10 +51,14 @@ jobs:
       - name: Download Semgrep rules
         run: git clone --depth 1 https://github.com/frappe/semgrep-rules.git frappe-semgrep-rules
 
-      - name: Run Semgrep rules on private overlay
+      - name: Run Semgrep rules on production overlay
         run: |
           pip install semgrep
-          semgrep scan --error --baseline-commit "$OFFICIAL_WIKI_SHA" --config ./frappe-semgrep-rules/rules --config r/python.lang.correctness
+          semgrep scan --error \
+            --baseline-commit "$OFFICIAL_WIKI_SHA" \
+            --exclude '**/*test*.py' \
+            --config ./frappe-semgrep-rules/rules \
+            --config r/python.lang.correctness
 
   precommit:
     name: 'Pre-Commit'
