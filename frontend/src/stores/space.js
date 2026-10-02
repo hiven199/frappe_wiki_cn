@@ -71,6 +71,7 @@ export const useSpaceStore = defineStore('space', () => {
 
 	// Editing a space is gated server-side; this only hides the UI.
 	const canWriteSpace = ref(false);
+	const canDeleteSpace = ref(false);
 	// null until the capabilities land: a space is neither drafted nor read-only
 	// until we know which, and picking either one early hydrates the wrong tree.
 	const canContribute = ref(null);
@@ -88,6 +89,7 @@ export const useSpaceStore = defineStore('space', () => {
 		url: 'wiki.api.get_space_capabilities',
 		onSuccess: (data) => {
 			canWriteSpace.value = Boolean(data?.can_write);
+			canDeleteSpace.value = Boolean(data?.can_delete);
 			canContribute.value = Boolean(data?.can_contribute);
 		},
 	});
@@ -96,6 +98,7 @@ export const useSpaceStore = defineStore('space', () => {
 		spaceId,
 		(id) => {
 			canWriteSpace.value = false;
+			canDeleteSpace.value = false;
 			canContribute.value = null;
 			if (id) capabilitiesResource.submit({ space: id });
 		},
@@ -325,6 +328,7 @@ export const useSpaceStore = defineStore('space', () => {
 		isGitSynced,
 		syncStatusLabel,
 		canWriteSpace,
+		canDeleteSpace,
 		canContribute,
 		isReadonly,
 		canEdit,
