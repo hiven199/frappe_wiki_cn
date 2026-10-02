@@ -55,7 +55,7 @@
 						:title="__('Page views')"
 						:data="analytics.data?.series || []"
 						x="date"
-						:y="['views', 'new_visitors']"
+						y="['views', 'new_visitors']"
 						:series-config="seriesConfig"
 						:x-axis="xAxis"
 						:y-axis="{ echartOptions: { minInterval: 1 } }"
@@ -310,5 +310,5 @@ function DeltaText({ delta }) {
 }
 DeltaText.props = ['delta'];
 
-usePageMeta(() => ({ title: `${__('Overview')} | Frappe Wiki` }));
+usePageMeta(() => ({ title: `${__('Overview')} | ${__('Wiki')}` }));
 </script>
