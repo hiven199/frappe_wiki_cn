@@ -94,7 +94,6 @@ jobs:
           key: ${{ runner.os }}-pip-${{ hashFiles('**/*requirements.txt', '**/pyproject.toml', '**/setup.py', '**/setup.cfg') }}
           restore-keys: |
             ${{ runner.os }}-pip-
-            ${{ runner.os }}-
 
       - name: Get yarn cache directory path
         id: yarn-cache-dir-path
@@ -193,13 +192,18 @@ jobs:
 
       - name: Show Bench Logs on Failure
         if: failure()
-        working-directory: /home/runner/frappe-bench
         run: |
-          echo "=== Bench Start Log ==="
-          cat bench_start.log || true
-          echo ""
-          echo "=== Frappe Logs ==="
-          cat logs/*.log || true
+          if [ -d /home/runner/frappe-bench ]; then
+            cd /home/runner/frappe-bench
+            echo "=== Bench Start Log ==="
+            cat bench_start.log || true
+            echo ""
+            echo "=== Frappe Logs ==="
+            cat logs/*.log || true
+          else
+            echo "=== Bench directory missing ==="
+            echo "Failure occurred before bench initialization."
+          fi
 
   merge-reports:
     # Merge the per-shard blob reports into a single HTML report.
