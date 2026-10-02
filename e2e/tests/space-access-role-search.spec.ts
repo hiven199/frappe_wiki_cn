@@ -108,18 +108,21 @@ test.describe('Space Settings -> Access role search', () => {
 
 		// Inject one deterministic role translation into the SPA dictionary. This
 		// keeps the rest of the application's real translations intact.
-		await page.route('**/api/method/wiki.api.get_translations', async (route) => {
-			const response = await route.fetch();
-			const payload = await response.json();
-			payload.message = {
-				...(payload.message || {}),
-				[roleName]: localizedRoleName,
-			};
-			await route.fulfill({
-				response,
-				body: JSON.stringify(payload),
-			});
-		});
+		await page.route(
+			'**/api/method/wiki.api.get_translations',
+			async (route) => {
+				const response = await route.fetch();
+				const payload = await response.json();
+				payload.message = {
+					...(payload.message || {}),
+					[roleName]: localizedRoleName,
+				};
+				await route.fulfill({
+					response,
+					body: JSON.stringify(payload),
+				});
+			},
+		);
 
 		const submittedQueries: string[] = [];
 		await page.route(

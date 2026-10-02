@@ -3,7 +3,10 @@ import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 
-const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const repoRoot = path.resolve(
+	path.dirname(fileURLToPath(import.meta.url)),
+	'..',
+);
 const failures = [];
 
 function read(relativePath) {
@@ -83,12 +86,12 @@ requireMatch(
 );
 forbidMatch(
 	'frontend/src/components/tiptap-extensions/WikiToolbar.vue',
-	/label:\s*['"](?:Task List|Code Block|Insert Image|Insert PDF|Insert Video|Heading)['"]/, 
+	/label:\s*['"](?:Task List|Code Block|Insert Image|Insert PDF|Insert Video|Heading)['"]/,
 	'raw editor toolbar label bypasses i18n',
 );
 forbidMatch(
 	'frontend/src/components/tiptap-extensions/WikiBubbleMenu.vue',
-	/label:\s*['"]Code Block['"]/, 
+	/label:\s*['"]Code Block['"]/,
 	'raw bubble-menu label bypasses i18n',
 );
 requireMatch(
@@ -113,7 +116,7 @@ forbidMatch(
 );
 forbidMatch(
 	'frontend/src/components/tiptap-extensions/LinkPopup.vue',
-	/title=['"](?:Submit|Cancel|Copy|Edit|Remove)['"]/, 
+	/title=['"](?:Submit|Cancel|Copy|Edit|Remove)['"]/,
 	'raw link-popup tooltip bypasses i18n',
 );
 forbidMatch(
@@ -123,22 +126,22 @@ forbidMatch(
 );
 requireMatch(
 	'frontend/src/components/IconGrid.vue',
-	/:title=['"]__\(icon\.label\)['"]/, 
+	/:title=['"]__\(icon\.label\)['"]/,
 	'localized icon-picker labels',
 );
 forbidMatch(
 	'frontend/src/components/WikiEditor.vue',
-	/toast\.(?:success|error)\(\s*['"](?:Failed to upload file|Editor is not ready|Could not get content from editor)['"]/, 
+	/toast\.(?:success|error)\(\s*['"](?:Failed to upload file|Editor is not ready|Could not get content from editor)['"]/,
 	'raw WikiEditor toast bypasses i18n',
 );
 forbidMatch(
 	'frontend/src/components/WikiEditor.vue',
-	/error:\s*error\?\.message\s*\|\|\s*['"](?:Failed to upload image|Failed to upload PDF)['"]/, 
+	/error:\s*error\?\.message\s*\|\|\s*['"](?:Failed to upload image|Failed to upload PDF)['"]/,
 	'raw WikiEditor upload error bypasses i18n',
 );
 forbidMatch(
 	'frontend/src/components/WikiEditor.vue',
-	/placeholder:\s*['"]Type \\"\/\\" for commands, or start writing\.\.\.['"]/, 
+	/placeholder:\s*['"]Type \\"\/\\" for commands, or start writing\.\.\.['"]/,
 	'raw WikiEditor placeholder bypasses i18n',
 );
 
@@ -160,12 +163,12 @@ const visibleStringChecks = [
 	],
 	[
 		'frontend/src/components/tiptap-extensions/PdfViewerModal.vue',
-		/title=['"](?:Zoom out|Zoom in|Download|Close \(Esc\))['"]/, 
+		/title=['"](?:Zoom out|Zoom in|Download|Close \(Esc\))['"]/,
 		'raw PDF-viewer tooltip bypasses i18n',
 	],
 	[
 		'frontend/src/components/tiptap-extensions/VideoBlockView.vue',
-		/(?:>\s*Video\s*<|Your browser does not support the video tag\.(?!['"]\)\s*\}\}))/, 
+		/(?:>\s*Video\s*<|Your browser does not support the video tag\.(?!['"]\)\s*\}\}))/,
 		'raw video-block fallback text bypasses i18n',
 	],
 	[

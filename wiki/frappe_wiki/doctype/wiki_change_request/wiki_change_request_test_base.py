@@ -420,14 +420,8 @@ class TestWikiChangeRequest(FrappeTestCase):
 		# test. Production schedules the same helper with enqueue_after_commit.
 		reindex_docs([page.name])
 
-		stale_names = [
-			r["name"]
-			for r in search.search("staletermv1zzz")["results"]
-		]
-		fresh_names = [
-			r["name"]
-			for r in search.search("freshtermv2zzz")["results"]
-		]
+		stale_names = [r["name"] for r in search.search("staletermv1zzz")["results"]]
+		fresh_names = [r["name"] for r in search.search("freshtermv2zzz")["results"]]
 		self.assertNotIn(page.name, stale_names)
 		self.assertIn(page.name, fresh_names)
 

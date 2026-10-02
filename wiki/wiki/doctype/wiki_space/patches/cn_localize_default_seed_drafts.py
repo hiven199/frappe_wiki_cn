@@ -7,7 +7,6 @@ from wiki.frappe_wiki.doctype.wiki_revision.wiki_revision import (
 	recompute_revision_hashes,
 )
 
-
 DEFAULT_SPACE_ROUTE = "docs"
 DEFAULT_SPACE_NAME = "Wiki"
 DEFAULT_PAGE_TITLE = "Welcome to Frappe Wiki"
@@ -72,11 +71,7 @@ def execute():
 			continue
 
 		content_blob = item.get("content_blob")
-		content = (
-			frappe.db.get_value("Wiki Content Blob", content_blob, "content")
-			if content_blob
-			else ""
-		)
+		content = frappe.db.get_value("Wiki Content Blob", content_blob, "content") if content_blob else ""
 		if (content or "").strip() != DEFAULT_PAGE_CONTENT:
 			continue
 

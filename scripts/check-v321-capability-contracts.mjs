@@ -3,7 +3,10 @@ import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 
-const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const repoRoot = path.resolve(
+	path.dirname(fileURLToPath(import.meta.url)),
+	'..',
+);
 const failures = [];
 
 function read(relativePath) {
@@ -26,12 +29,18 @@ function requireCount(relativePath, text, expected, description) {
 	const source = read(relativePath);
 	const count = source.split(text).length - 1;
 	if (count !== expected) {
-		failures.push(`${relativePath}: ${description}; expected ${expected}, got ${count}`);
+		failures.push(
+			`${relativePath}: ${description}; expected ${expected}, got ${count}`,
+		);
 	}
 }
 
 // Wiki 3.2.1 exact source family.
-requireText('wiki/__init__.py', '__version__ = "3.2.1"', 'Wiki 3.2.1 version marker');
+requireText(
+	'wiki/__init__.py',
+	'__version__ = "3.2.1"',
+	'Wiki 3.2.1 version marker',
+);
 
 // Role capability: localized display, canonical Role.name storage.
 requireText(
@@ -88,7 +97,12 @@ requireText(
 );
 
 // Git Sync capability: persisted canonical status values are localized only at display time.
-for (const label of ['Sync succeeded', 'Sync failed', 'Sync in progress', 'No changes']) {
+for (const label of [
+	'Sync succeeded',
+	'Sync failed',
+	'Sync in progress',
+	'No changes',
+]) {
 	requireText(
 		'frontend/src/components/SpaceSettings/GitSyncPanel.vue',
 		`__('${label}')`,
@@ -110,13 +124,25 @@ for (const token of [
 	"upload_endpoint: '/api/method/wiki.api.upload_wiki_asset'",
 	'readonly:',
 ]) {
-	requireText('frontend/src/components/WikiEditor.vue', token, `Wiki 3.2.1 editor seam ${token}`);
+	requireText(
+		'frontend/src/components/WikiEditor.vue',
+		token,
+		`Wiki 3.2.1 editor seam ${token}`,
+	);
 }
 
 // The SPA bootstrap must preload translations exactly once before mounting and stay compatible with
 // the exact official Wiki 3.2.1 frappe-ui dependency. pageMetaPlugin is not exported by beta.55.
-requireText('frontend/src/main.js', 'await loadTranslations();', 'translation preload before mount');
-requireText('frontend/src/main.js', 'const app = createApp(App);', 'Vue app construction inside bootstrap');
+requireText(
+	'frontend/src/main.js',
+	'await loadTranslations();',
+	'translation preload before mount',
+);
+requireText(
+	'frontend/src/main.js',
+	'const app = createApp(App);',
+	'Vue app construction inside bootstrap',
+);
 requireText(
 	'frontend/package.json',
 	'"frappe-ui": "1.0.0-beta.55"',
@@ -127,8 +153,18 @@ forbidText(
 	'pageMetaPlugin',
 	'pageMetaPlugin is not exported by frappe-ui 1.0.0-beta.55',
 );
-requireCount('frontend/src/main.js', 'app.use(pinia);', 1, 'Pinia plugin must be registered once');
-requireCount('frontend/src/main.js', 'app.use(router);', 1, 'router plugin must be registered once');
+requireCount(
+	'frontend/src/main.js',
+	'app.use(pinia);',
+	1,
+	'Pinia plugin must be registered once',
+);
+requireCount(
+	'frontend/src/main.js',
+	'app.use(router);',
+	1,
+	'router plugin must be registered once',
+);
 requireCount(
 	'frontend/src/main.js',
 	'app.use(translationPlugin);',
@@ -148,7 +184,11 @@ for (const token of [
 	'id="image-viewer-toolbar"',
 	'id="image-viewer-zoom"',
 ]) {
-	requireText('wiki/templates/wiki/layout.html', token, `reader image viewer seam ${token}`);
+	requireText(
+		'wiki/templates/wiki/layout.html',
+		token,
+		`reader image viewer seam ${token}`,
+	);
 }
 for (const token of [
 	'fitToScreen',
@@ -159,7 +199,11 @@ for (const token of [
 	'#wiki-content .mermaid[data-processed] svg',
 	'openSvg',
 ]) {
-	requireText('wiki/public/js/image-viewer.js', token, `image viewer capability ${token}`);
+	requireText(
+		'wiki/public/js/image-viewer.js',
+		token,
+		`image viewer capability ${token}`,
+	);
 }
 forbidText(
 	'wiki/public/js/image-viewer.js',

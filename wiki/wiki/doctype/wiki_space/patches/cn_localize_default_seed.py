@@ -1,6 +1,5 @@
 import frappe
 
-
 DEFAULT_SPACE_ROUTE = "docs"
 DEFAULT_SPACE_NAME = "Wiki"
 DEFAULT_HOME_TAB = "Home"
