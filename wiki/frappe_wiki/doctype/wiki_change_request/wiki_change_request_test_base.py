@@ -390,7 +390,7 @@ class TestWikiChangeRequest(FrappeTestCase):
 		"""Content-only merges write via raw db.set_value, which skips the
 		on_update hook — the merge must queue the re-index itself, or search
 		keeps serving the pre-merge content."""
-		from wiki.frappe_wiki.doctype.wiki_document.wiki_sqlite_search import WikiSQLiteSearch
+		from wiki.frappe_wiki.doctype.wiki_document.wiki_sqlite_search import WikiSQLiteSearch, reindex_docs
 
 		space = create_test_wiki_space()
 		page = create_test_wiki_document(
@@ -406,6 +406,11 @@ class TestWikiChangeRequest(FrappeTestCase):
 		cr = create_change_request(space.name, "CR Search Reindex")
 		page_key = frappe.get_value("Wiki Document", page.name, "doc_key")
 		update_cr_page(cr.name, page_key, {"content": "freshtermv2zzz"})
+
+		with patch(
+			"wiki.frappe_wiki.doctype.wiki_document.wiki_sqlite_search.enqueue_reindex"
+		) as enqueue_reindex:
+			_approve_and_merge(cr.name)
 
 		drain_search_index_queue()
 
