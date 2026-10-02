@@ -31,7 +31,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-      - name: Patch runtime regression test and failure diagnostics
+      - name: Patch search reindex runtime regression
         shell: bash
         run: |
           set -euo pipefail
@@ -51,17 +51,9 @@ jobs:
           if old_merge not in text:
               raise SystemExit('search reindex merge anchor missing')
           test_path.write_text(text.replace(old_merge, new_merge, 1))
-
-          ui_path = Path('.github/workflows/ui-tests.yml')
-          ui = ui_path.read_text()
-          old_diag = '''      - name: Show Bench Logs on Failure\n        if: failure()\n        working-directory: /home/runner/frappe-bench\n        run: |\n          echo "=== Bench Start Log ==="\n          cat bench_start.log || true\n          echo ""\n          echo "=== Frappe Logs ==="\n          cat logs/*.log || true'''
-          new_diag = '''      - name: Show Bench Logs on Failure\n        if: failure()\n        run: |\n          if [ -d /home/runner/frappe-bench ]; then\n            cd /home/runner/frappe-bench\n            echo "=== Bench Start Log ==="\n            cat bench_start.log || true\n            echo ""\n            echo "=== Frappe Logs ==="\n            cat logs/*.log || true\n          else\n            echo "=== Bench directory missing ==="\n            echo "Failure occurred before bench initialization."\n          fi'''
-          if old_diag not in ui:
-              raise SystemExit('UI failure diagnostic anchor missing')
-          ui_path.write_text(ui.replace(old_diag, new_diag, 1))
           PY
-          git add wiki/frappe_wiki/doctype/wiki_change_request/wiki_change_request_test_base.py .github/workflows/ui-tests.yml
-          git commit -m "fix(wiki): repair reindex regression and CI diagnostics"
+          git add wiki/frappe_wiki/doctype/wiki_change_request/wiki_change_request_test_base.py
+          git commit -m "fix(wiki): repair search reindex regression test"
 
       - name: Normalize private overlay with pre-commit
         shell: bash
