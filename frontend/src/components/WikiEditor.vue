@@ -69,6 +69,7 @@ import {
 	Markdown,
 	useEditor,
 } from 'frappe-ui/editor';
+import { translate as t } from '../translation';
 import EditorTableOfContents from './EditorTableOfContents.vue';
 import LinkPopup from './tiptap-extensions/LinkPopup.vue';
 import SlashCommandsList from './tiptap-extensions/SlashCommandsList.vue';

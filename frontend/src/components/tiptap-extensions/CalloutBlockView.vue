@@ -14,6 +14,7 @@ import { useNodeViewEditable } from '@/composables/useNodeViewEditable';
 import { NodeViewContent, NodeViewWrapper } from '@tiptap/vue-3';
 import { Button, Dropdown } from 'frappe-ui';
 import { computed } from 'vue';
+import { translate as t } from '../../translation';
 import { DEFAULT_TITLES } from './callout-markdown.js';
 
 const props = defineProps({

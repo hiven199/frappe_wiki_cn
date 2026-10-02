@@ -77,8 +77,14 @@ test.describe('Global Wiki Settings', () => {
 		await page.goto(APP_BASE);
 		await page.waitForLoadState('networkidle');
 
-		// The sidebar header is a dropdown trigger labelled with the app title.
-		await page.getByRole('button', { name: 'Frappe Wiki' }).click();
+		// Use the logo in the sidebar header as the stable dropdown trigger; the
+		// accessible app title is intentionally de-branded/localized in this fork.
+		const sidebarHeader = page
+			.locator('aside')
+			.getByRole('button')
+			.filter({ has: page.getByRole('img', { name: 'Logo' }) })
+			.first();
+		await sidebarHeader.click();
 		await page.getByRole('menuitem', { name: 'Settings' }).click();
 
 		const dialog = page.getByRole('dialog');
