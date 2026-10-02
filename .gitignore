@@ -7,6 +7,7 @@ wiki/docs/current
 wiki/public/dist
 dist/
 css-rtl/
+node_modules
 node_modules/*
 .cypress-coverage
 cypress/screenshots
@@ -24,6 +25,7 @@ test-results/
 e2e/.auth/
 .env
 screenshots/
+worktrees/
 
 # Local design tool for the generated OG card (/og_playground) — renders the
 # real template with live dials. Handy while iterating, not something to ship.

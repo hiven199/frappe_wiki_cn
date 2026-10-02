@@ -21,7 +21,9 @@ export async function loadTranslations() {
 		});
 
 		if (!response.ok) {
-			throw new Error(`translation request failed with status ${response.status}`);
+			throw new Error(
+				`translation request failed with status ${response.status}`,
+			);
 		}
 
 		const payload = await response.json();

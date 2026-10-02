@@ -16,7 +16,6 @@ import {
 	FormControl,
 	TextInput,
 	frappeRequest,
-	pageMetaPlugin,
 	resourcesPlugin,
 	setConfig,
 } from 'frappe-ui';
@@ -48,7 +47,6 @@ async function bootstrap() {
 	app.use(router);
 	app.use(translationPlugin);
 	app.use(resourcesPlugin);
-	app.use(pageMetaPlugin);
 
 	const socket = initSocket();
 	app.config.globalProperties.$socket = socket;

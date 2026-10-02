@@ -1,24 +1,24 @@
-name: Upstream Compatibility v16
+name: App-specific Gate / Wiki 3.2.1 Compatibility
 
 on:
-  push:
-    branches:
-      - version-16
-  pull_request:
-    branches:
-      - version-16
+  workflow_dispatch:
+
+permissions:
+  contents: read
 
 concurrency:
-  group: version-16-wiki-upstream-${{ github.event.pull_request.number || github.ref_name }}
+  group: version-16-wiki-upstream-${{ github.ref_name }}
   cancel-in-progress: true
 
 env:
-  FRAPPE_REF: v16.33.1
+  FRAPPE_REF: v16.34.0
+  FRAPPE_COMMIT: c1f1e8ec3708750d7254f7f99d869ffb9886f19f
+  OFFICIAL_WIKI_SHA: 0c0adb06b9deb84d11d1f95e85df891c2a29f8da
 
 jobs:
   server:
     runs-on: ubuntu-latest
-    name: Frappe 16.33.1 / Wiki 3.0.1
+    name: Frappe 16.34.0 exact / Wiki 3.2.1 CN candidate
 
     services:
       redis-cache:
@@ -40,6 +40,30 @@ jobs:
     steps:
       - name: Clone
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: false
+          persist-credentials: false
+
+      - name: Verify exact Wiki 3.2.1 lineage and CN capability seams
+        run: |
+          set -euo pipefail
+          test "$(python - <<'PY'
+          ns = {}
+          exec(open('wiki/__init__.py', encoding='utf-8').read(), ns)
+          print(ns['__version__'])
+          PY
+          )" = "3.2.1"
+          git merge-base --is-ancestor "$OFFICIAL_WIKI_SHA" HEAD
+          grep -Fq 'def search_roles(' wiki/api/wiki_space.py
+          grep -Fq "url: 'wiki.api.wiki_space.search_roles'" frontend/src/components/SpaceSettings/AccessPanel.vue
+          grep -Fq '{{ __(row.role) }}' frontend/src/components/SpaceSettings/AccessPanel.vue
+          grep -Fq 'def reindex_docs(' wiki/frappe_wiki/doctype/wiki_document/wiki_sqlite_search.py
+          grep -Fq 'enqueue_after_commit=True' wiki/frappe_wiki/doctype/wiki_document/wiki_sqlite_search.py
+          test -f wiki/frappe_wiki/doctype/wiki_document/test_wiki_sqlite_search_compat.py
+          test -f tests/test_sync_status_i18n_static.py
+          test -f tests/test_image_viewer_zoom_static.py
+          test -f scripts/check-v321-capability-contracts.mjs
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -52,6 +76,17 @@ jobs:
           node-version: 24
           check-latest: true
 
+      - name: Run Wiki 3.2.1 static capability contracts
+        run: |
+          set -euo pipefail
+          python tests/test_sync_status_i18n_static.py
+          python tests/test_image_viewer_zoom_static.py
+          node scripts/check-v321-capability-contracts.mjs
+          node scripts/check-cn-i18n-foundation.mjs
+          node scripts/check-cn-public-actions.mjs
+          node scripts/check-cn-seed.mjs
+          node scripts/check-cn-visible-brand.mjs
+
       - name: Install MariaDB Client
         run: |
           sudo apt update
@@ -59,15 +94,22 @@ jobs:
 
       - name: Initialize pinned Frappe bench
         run: |
+          set -euo pipefail
           pip install frappe-bench
           bench init --frappe-branch "$FRAPPE_REF" --skip-redis-config-generation --skip-assets --python "$(which python)" ~/frappe-bench
+          actual_frappe_commit="$(git -C ~/frappe-bench/apps/frappe rev-parse HEAD)"
+          if [ "$actual_frappe_commit" != "$FRAPPE_COMMIT" ]; then
+            echo "Frappe drift: expected $FRAPPE_COMMIT, got $actual_frappe_commit" >&2
+            exit 1
+          fi
           mariadb --host 127.0.0.1 --port 3306 -u root -proot -e "SET GLOBAL character_set_server = 'utf8mb4'"
           mariadb --host 127.0.0.1 --port 3306 -u root -proot -e "SET GLOBAL collation_server = 'utf8mb4_unicode_ci'"
 
       - name: Install Wiki
         working-directory: /home/runner/frappe-bench
         run: |
-          bench get-app wiki $GITHUB_WORKSPACE
+          set -euo pipefail
+          bench get-app wiki "$GITHUB_WORKSPACE"
           bench setup requirements --dev
           bench new-site --db-root-password root --admin-password admin test_site
           bench --site test_site install-app wiki
@@ -76,10 +118,20 @@ jobs:
         env:
           CI: "Yes"
 
-      - name: Run Wiki tests
+      - name: Run targeted Wiki compatibility tests
         working-directory: /home/runner/frappe-bench
         run: |
+          set -euo pipefail
           bench --site test_site set-config allow_tests true
-          bench --site test_site run-tests --app wiki
+          bench --site test_site run-tests --app wiki --module wiki.api.test_role_search
+          bench --site test_site run-tests --app wiki --module wiki.frappe_wiki.doctype.wiki_document.test_wiki_sqlite_search_compat
+          bench --site test_site run-tests --app wiki --module wiki.frappe_wiki.doctype.wiki_change_request.test_wiki_change_request
         env:
           TYPE: server
+
+      - name: Gate summary
+        run: |
+          echo "FRAPPE_REF=$FRAPPE_REF"
+          echo "FRAPPE_COMMIT=$FRAPPE_COMMIT"
+          echo "OFFICIAL_WIKI_SHA=$OFFICIAL_WIKI_SHA"
+          echo "WIKI_V321_CAPABILITY_GATE=PASS"
