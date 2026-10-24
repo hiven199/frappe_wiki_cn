@@ -12,15 +12,9 @@
 import { Node, mergeAttributes } from '@tiptap/core';
 import { VueNodeViewRenderer } from '@tiptap/vue-3';
 import PdfBlockView from './PdfBlockView.vue';
+import { isPdfUrl } from './media-urls.js';
 
-/**
- * Check if a URL points to a PDF based on its file extension.
- */
-export function isPdfUrl(url) {
-	if (!url) return false;
-	const cleanUrl = String(url).split(/[?#]/)[0].toLowerCase();
-	return cleanUrl.endsWith('.pdf');
-}
+export { isPdfUrl } from './media-urls.js';
 
 export const PdfBlock = Node.create({
 	name: 'pdfBlock',
@@ -132,14 +126,16 @@ export const PdfBlock = Node.create({
 		},
 
 		tokenize(src) {
-			const match = /^!\[([^\]]*)\]\(([^)]+)\)/.exec(src);
+			const imagePattern =
+				/^!\[([^\]]*)\]\(((?:[^()"]|\([^()"]*\))+?)(?:\s+"([^"]*)")?\)/;
+			const match = imagePattern.exec(src);
 
 			if (!match) {
 				return undefined;
 			}
 
 			const filename = match[1];
-			const url = match[2];
+			const url = (match[2] || '').trim();
 
 			// Only tokenize when it's a PDF URL — otherwise let the image/video
 			// tokenizers handle it.

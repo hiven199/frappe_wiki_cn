@@ -3,7 +3,7 @@
 
 import unittest
 
-from wiki.wiki.markdown import render_markdown, render_markdown_with_toc
+from wiki.wiki.markdown import CALLOUT_ICONS, render_markdown, render_markdown_with_toc
 
 
 class TestMarkdownRenderer(unittest.TestCase):
@@ -166,6 +166,23 @@ class TestImageCaptionSupport(unittest.TestCase):
 		self.assertNotIn("<figure", result)
 		self.assertNotIn("<figcaption", result)
 
+	def test_caption_is_the_next_sibling_of_the_image(self):
+		"""The caption CSS is `img + em`, so no <br> may sit between them."""
+		result = render_markdown("![Alt](/files/test.jpg)\n*Caption*")
+		self.assertRegex(result, r'<img src="/files/test.jpg" alt="Alt" />\s*<em>Caption</em>')
+
+	def test_caption_after_image_on_its_own_line_inside_a_paragraph(self):
+		result = render_markdown("Some text\n![Alt](/files/test.jpg)\n*Caption*")
+		self.assertRegex(result, r'<img src="/files/test.jpg" alt="Alt" />\s*<em>Caption</em>')
+
+	def test_inline_image_does_not_turn_the_next_line_into_a_caption(self):
+		result = render_markdown("Click ![icon](/files/icon.png)\n*then save*")
+		self.assertIn('<img src="/files/icon.png" alt="icon" /><br />', result)
+
+	def test_soft_break_after_image_still_breaks_before_plain_text(self):
+		result = render_markdown("![Alt](/files/test.jpg)\nnot a caption")
+		self.assertIn("<br />", result)
+
 	def test_image_without_caption(self):
 		"""Test that images without caption render as simple img tags."""
 		result = render_markdown("![](/files/test.jpg)")
@@ -324,6 +341,29 @@ This has **bold text** and *italic text* and [a link](https://example.com)
 		self.assertIn("<em>italic text</em>", result)
 		self.assertIn('href="https://example.com"', result)
 		self.assertIn("a link", result)
+
+	def test_callout_html_is_the_alert_banner_structure(self):
+		"""Header row (icon + title), then a full-width body.
+
+		The editor's node view builds the same three elements, so the public page
+		and the editor agree — the old markup nested the body beside the title in
+		a `.callout-body` grid cell.
+		"""
+		result = render_markdown(":::tip[Careful]\nBody text\n:::\n")
+		self.assertIn('<aside class="callout callout-tip">', result)
+		self.assertIn('<div class="callout-header">', result)
+		self.assertIn('<span class="callout-title">Careful</span>', result)
+		self.assertIn('<div class="callout-content">', result)
+		self.assertNotIn("callout-body", result)
+
+	def test_callout_icon_is_the_alert_status_glyph(self):
+		"""Each type carries frappe-ui Alert's solid status glyph at 16px."""
+		for callout_type in ("note", "tip", "caution", "danger"):
+			with self.subTest(callout_type=callout_type):
+				result = render_markdown(f":::{callout_type}\nBody\n:::\n")
+				self.assertIn('viewBox="0 0 16 16"', result)
+				self.assertIn('fill="currentColor"', result)
+				self.assertIn(CALLOUT_ICONS[callout_type], result)
 
 	def test_indented_callout(self):
 		"""Test callout that is indented (e.g. inside a list item) still renders."""
@@ -574,6 +614,30 @@ class TestTableRendering(unittest.TestCase):
 		result = render_markdown(content)
 		self.assertIn("<table>", result)
 		self.assertIn("<code>dict[int, dict | list]</code>", result)
+
+
+class TestInternalLinkRendering(unittest.TestCase):
+	"""`[Label](wiki:<doc_key>)` renders with the key, for the reader to resolve."""
+
+	def test_internal_link_carries_the_key_not_an_href(self):
+		self.assertEqual(
+			render_markdown("See [Setup](wiki:a1b2c3d4e5f6)."),
+			'<p>See <a data-wiki-link="a1b2c3d4e5f6">Setup</a>.</p>\n',
+		)
+
+	def test_internal_link_keeps_its_title(self):
+		self.assertIn(
+			'<a data-wiki-link="a1b2" title="Guide">Setup</a>',
+			render_markdown('[Setup](wiki:a1b2 "Guide")'),
+		)
+
+	def test_external_links_are_untouched(self):
+		self.assertIn(
+			'<a href="https://wiki.example.com">x</a>', render_markdown("[x](https://wiki.example.com)")
+		)
+
+	def test_malformed_key_stays_a_plain_link(self):
+		self.assertIn('href="wiki:a%20b"', render_markdown("[x](<wiki:a b>)"))
 
 
 class TestTaskListRendering(unittest.TestCase):
@@ -834,6 +898,17 @@ class TestBlankLinePreservation(unittest.TestCase):
 		self.assertEqual(self._gaps(wide), 2)
 		self.assertIn("wiki-pdf-embed", render_markdown(before))
 
+	def test_embed_filename_with_spaces_and_parens_stays_a_block(self):
+		"""Frappe keeps the uploaded filename, so `(2)` and spaces are routine.
+		The embed must still become a block card, not an inline image inside a <p>."""
+		html = render_markdown("![VIEW QUICK 2X5L (2).pdf](/files/VIEW QUICK 2X5L (2).pdf)")
+		self.assertIn("wiki-pdf-embed", html)
+		self.assertNotIn('<p><div class="wiki-pdf-embed"', html)
+
+		html = render_markdown("![my clip (1).mp4](/files/my clip (1).mp4)")
+		self.assertIn('data-type="video-block"', html)
+		self.assertNotIn('<p><div data-type="video-block"', html)
+
 	def test_adjacent_placeholders_do_not_gain_a_gap(self):
 		"""Two custom blocks one newline apart: each side contributes a newline to
 		break the placeholder out as a block, giving three — still one short of the
@@ -882,3 +957,89 @@ class TestBlankLinePreservation(unittest.TestCase):
 
 if __name__ == "__main__":
 	unittest.main()
+
+
+class TestThemeAwareImages(unittest.TestCase):
+	"""An image with a dark mode file is saved as a <picture> block."""
+
+	PICTURE = (
+		"<picture>\n"
+		'  <source srcset="/files/shot-dark.png" media="(prefers-color-scheme: dark)">\n'
+		'  <img src="/files/shot.png" alt="Settings page">\n'
+		"</picture>"
+	)
+
+	def test_picture_keeps_both_sources(self):
+		result = render_markdown(self.PICTURE)
+
+		self.assertIn(
+			'<p><picture><source srcset="/files/shot-dark.png" media="(prefers-color-scheme: dark)">'
+			'<img src="/files/shot.png" alt="Settings page" /></picture></p>',
+			result,
+		)
+
+	def test_caption_is_the_next_sibling_of_the_picture(self):
+		"""markdown-it reads the caption line as part of the raw HTML block."""
+		result = render_markdown(self.PICTURE + "\n*The `settings` page*")
+
+		self.assertRegex(result, r"</picture>\s*<em>The <code>settings</code> page</em></p>")
+		self.assertNotIn("*The", result)
+
+	def test_title_is_kept(self):
+		result = render_markdown(self.PICTURE.replace('alt="Settings page"', 'alt="" title="Settings"'))
+
+		self.assertIn('<img src="/files/shot.png" alt="" title="Settings" />', result)
+
+	def test_alt_removes_script_tags(self):
+		result = render_markdown(
+			self.PICTURE.replace('alt="Settings page"', 'alt="<script>alert(1)</script>Settings"')
+		)
+
+		self.assertIn('alt="Settings"', result)
+		self.assertNotIn("<script>", result)
+
+	def test_picture_inside_a_code_fence_stays_code(self):
+		result = render_markdown(f"```html\n{self.PICTURE}\n```")
+
+		self.assertIn("&lt;picture&gt;", result)
+		self.assertNotIn("<picture>", result)
+
+	def test_other_html_blocks_pass_through(self):
+		result = render_markdown('<div class="note">Raw</div>')
+
+		self.assertIn('<div class="note">Raw</div>', result)
+
+	def test_width_and_alignment_are_kept(self):
+		result = render_markdown(
+			"<picture>\n"
+			'  <img src="/files/shot.png" alt="Settings" width="480" data-align="left">\n'
+			"</picture>\n"
+			"*Caption*"
+		)
+
+		self.assertIn(
+			'<p data-align="left"><picture><img src="/files/shot.png" alt="Settings" width="480" data-align="left" /></picture>'
+			"\n<em>Caption</em></p>",
+			result,
+		)
+
+	def test_consecutive_pictures_keep_their_captions(self):
+		"""With no blank line between them, markdown-it reads both as one HTML block."""
+		result = render_markdown(f"{self.PICTURE}\n*Light*\n{self.PICTURE.replace('shot', 'other')}\n*Other*")
+
+		self.assertEqual(result.count("<p><picture>"), 2)
+		self.assertIn("</picture>\n<em>Light</em></p>", result)
+		self.assertIn("</picture>\n<em>Other</em></p>", result)
+		self.assertNotIn("*Light*", result)
+
+	def test_picture_followed_by_other_html_keeps_its_caption(self):
+		result = render_markdown(f'{self.PICTURE}\n*Light*\n<div class="note">Raw</div>')
+
+		self.assertIn("</picture>\n<em>Light</em></p>", result)
+		self.assertIn('<div class="note">Raw</div>', result)
+		self.assertNotIn("*Light*", result)
+
+	def test_unknown_alignment_is_not_claimed(self):
+		result = render_markdown('<picture>\n  <img src="/files/shot.png" alt="" data-align="x">\n</picture>')
+
+		self.assertNotIn('data-align="x" />', result)

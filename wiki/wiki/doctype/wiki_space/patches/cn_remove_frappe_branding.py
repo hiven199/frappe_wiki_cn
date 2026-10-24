@@ -7,7 +7,6 @@ from wiki.frappe_wiki.doctype.wiki_revision.wiki_revision import (
 	recompute_revision_hashes,
 )
 
-
 DEFAULT_SPACE_ROUTE = "docs"
 DEFAULT_SPACE_NAME = "Wiki"
 UPSTREAM_TITLE = "Welcome to Frappe Wiki"

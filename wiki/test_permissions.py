@@ -9,18 +9,20 @@ hook entry points (query conditions + has_permission) and the role editor API.
 """
 
 import frappe
-from frappe.tests import IntegrationTestCase
 
 from wiki.permissions import (
 	_accessible_space_names,
 	_is_manager,
 	can_contribute_to_space,
+	can_delete_space,
 	can_read_space,
 	can_write_space,
 	wiki_cr_has_permission,
 	wiki_document_has_permission,
 	wiki_space_has_permission,
 )
+from wiki.tests import WikiTestCase as IntegrationTestCase
+from wiki.tests.factory import make_space
 
 
 def _set_contributions(space: str, allow: bool) -> None:
@@ -57,22 +59,11 @@ def _ensure_user(email: str, roles: list[str]) -> str:
 
 
 def _make_space(test_case, name: str, roles: list[tuple[str, str]]) -> str:
-	root_group = frappe.get_doc({"doctype": "Wiki Document", "title": f"Root {name}", "is_group": 1}).insert(
-		ignore_permissions=True
+	space = make_space(
+		space_name=name,
+		route=frappe.scrub(name).replace("_", "-"),
+		roles=roles,
 	)
-	test_case._docs.append(root_group.name)
-
-	space = frappe.get_doc(
-		{
-			"doctype": "Wiki Space",
-			"space_name": name,
-			"route": frappe.scrub(name).replace("_", "-"),
-			"root_group": root_group.name,
-		}
-	)
-	for role, level in roles:
-		space.append("roles", {"role": role, "permission_level": level})
-	space.insert(ignore_permissions=True)
 	test_case._spaces.append(space.name)
 	return space.name
 
@@ -163,6 +154,21 @@ class TestWikiSpacePermissions(IntegrationTestCase):
 	def test_open_space_writable_only_by_approver(self):
 		self.assertTrue(can_write_space(self.open_space, self.approver))
 		self.assertFalse(can_write_space(self.open_space, self.outsider))
+
+	# --- can_delete_space ------------------------------------------------
+
+	def test_manager_deletes_any_space(self):
+		self.assertTrue(can_delete_space(self.restricted, self.manager))
+
+	def test_write_role_does_not_grant_delete(self):
+		self.assertFalse(can_delete_space(self.restricted, self.writer))
+
+	def test_read_role_does_not_grant_delete(self):
+		self.assertFalse(can_delete_space(self.restricted, self.reader))
+
+	def test_open_space_deletable_by_approver(self):
+		self.assertTrue(can_delete_space(self.open_space, self.approver))
+		self.assertFalse(can_delete_space(self.open_space, self.outsider))
 
 	# --- _accessible_space_names ----------------------------------------
 

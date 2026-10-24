@@ -21,12 +21,8 @@ class TestRoleSearchAPI(FrappeTestCase):
 		self.space.root_group = root_group.name
 		self.space.insert()
 
-		self.translated_role = self._create_role(
-			f"ZZZ Wiki Finance Manager {frappe.generate_hash(length=6)}"
-		)
-		self.fallback_role = self._create_role(
-			f"ZZZ Wiki Untranslated {frappe.generate_hash(length=6)}"
-		)
+		self.translated_role = self._create_role(f"ZZZ Wiki Finance Manager {frappe.generate_hash(length=6)}")
+		self.fallback_role = self._create_role(f"ZZZ Wiki Untranslated {frappe.generate_hash(length=6)}")
 
 	def tearDown(self):
 		frappe.set_user("Administrator")

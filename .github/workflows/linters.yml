@@ -8,6 +8,9 @@ on:
 permissions:
   contents: read
 
+env:
+  OFFICIAL_WIKI_SHA: 0c0adb06b9deb84d11d1f95e85df891c2a29f8da
+
 jobs:
   commit-lint:
     name: 'Semantic Commits'
@@ -35,28 +38,51 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-python@v5
         with:
           python-version: '3.13'
           cache: pip
+
+      - name: Verify official Wiki baseline
+        run: git merge-base --is-ancestor "$OFFICIAL_WIKI_SHA" HEAD
 
       - name: Download Semgrep rules
         run: git clone --depth 1 https://github.com/frappe/semgrep-rules.git frappe-semgrep-rules
 
-      - name: Run Semgrep rules
+      - name: Run Semgrep rules on production overlay
         run: |
           pip install semgrep
-          semgrep ci --config ./frappe-semgrep-rules/rules --config r/python.lang.correctness
+          semgrep scan --error \
+            --baseline-commit "$OFFICIAL_WIKI_SHA" \
+            --exclude '**/*test*.py' \
+            --config ./frappe-semgrep-rules/rules \
+            --config r/python.lang.correctness
 
   precommit:
     name: 'Pre-Commit'
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-python@v5
         with:
           python-version: '3.13'
           cache: pip
-      - uses: pre-commit/action@v3.0.1
+
+      - name: Verify official Wiki baseline
+        if: github.event_name == 'pull_request'
+        run: git merge-base --is-ancestor "$OFFICIAL_WIKI_SHA" HEAD
+
+      - name: Run pre-commit on private overlay
+        if: github.event_name == 'pull_request'
+        uses: pre-commit/action@v3.0.1
+        with:
+          extra_args: --from-ref ${{ env.OFFICIAL_WIKI_SHA }} --to-ref HEAD
+
+      - name: Run full pre-commit manually
+        if: github.event_name == 'workflow_dispatch'
+        uses: pre-commit/action@v3.0.1

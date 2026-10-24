@@ -313,6 +313,15 @@
     }
   });
 
+  stage.addEventListener("click", (event) => {
+    if (!isOpen()) return;
+    if (event.target !== stage || movedWhileDragging) {
+      movedWhileDragging = false;
+      return;
+    }
+    close();
+  });
+
   stage.addEventListener("pointerdown", (event) => {
     if (!isOpen()) return;
     if (event.pointerType === "mouse" && event.button !== 0) return;

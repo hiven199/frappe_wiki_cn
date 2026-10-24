@@ -29,12 +29,18 @@ def get_space_capabilities(space: str) -> dict:
 	always remains server-side in the permission hooks and Change Request
 	controller.
 	"""
-	from wiki.permissions import can_contribute_to_space, can_read_space, can_write_space
+	from wiki.permissions import (
+		can_contribute_to_space,
+		can_delete_space,
+		can_read_space,
+		can_write_space,
+	)
 
 	return {
 		"can_read": can_read_space(space),
 		"can_write": can_write_space(space),
 		"can_contribute": can_contribute_to_space(space),
+		"can_delete": can_delete_space(space),
 	}
 
 
@@ -60,7 +66,9 @@ def get_user_info() -> dict:
 	}
 
 
-@frappe.whitelist(allow_guest=True)
+# Public Wiki SPA bootstrap endpoint. Reviewed: returns only the translation
+# catalogue for the effective site language and no user-specific/private data.
+@frappe.whitelist(allow_guest=True)  # nosemgrep: frappe-semgrep-rules.rules.security.guest-whitelisted-method
 def get_translations():
 	return get_all_translations(_get_effective_language())
 
@@ -70,6 +78,34 @@ def _to_webp(path_or_url: str) -> str:
 	return os.path.splitext(path_or_url)[0] + ".webp"
 
 
+def _save_webp_without_overwrite(image, name: str) -> str:
+	"""Write `image` to a new file, never over an existing one.
+
+	generate_file_name only checks that the name is free. Two same-named
+	uploads converting at once (several images pasted together) both passed
+	that check, and the second write replaced the first image.
+	"""
+	from frappe.core.doctype.file.utils import get_file_name
+	from frappe.utils import get_files_path
+
+	for _ in range(5):
+		path = get_files_path(name)
+		try:
+			# nosemgrep: frappe-semgrep-rules.rules.security.frappe-security-file-traversal
+			f = open(path, "xb")
+		except FileExistsError:
+			name = get_file_name(name, frappe.generate_hash(length=6))
+			continue
+		try:
+			with f:
+				image.save(f, "WEBP")
+		except Exception:
+			os.remove(path)
+			raise
+		return name
+	raise FileExistsError(name)
+
+
 def convert_file_to_webp(file_doc) -> str:
 	"""Convert a local PNG/JPEG File doc to WebP in place.
 
@@ -77,7 +113,8 @@ def convert_file_to_webp(file_doc) -> str:
 	file_url. Returns the new (or unchanged, if not convertible) file_url.
 	"""
 	from frappe.core.doctype.file.file import get_local_image
-	from frappe.core.doctype.file.utils import delete_file
+	from frappe.core.doctype.file.utils import delete_file, generate_file_name
+	from frappe.utils import get_files_path
 
 	if not file_doc:
 		return ""
@@ -87,9 +124,11 @@ def convert_file_to_webp(file_doc) -> str:
 	if not file_url.startswith("/files") or not file_url.lower().endswith(CONVERTIBLE_IMAGE_EXTENSIONS):
 		return file_url
 
+	webp_name = generate_file_name(_to_webp(file_doc.file_name or os.path.basename(file_url)))
+
 	try:
 		image, _, _ = get_local_image(file_url)
-		image.save(_to_webp(file_doc.get_full_path()), "WEBP")
+		webp_name = _save_webp_without_overwrite(image, webp_name)
 	except Exception:
 		# Corrupt or unsupported image — keep the original upload rather than
 		# failing the whole request and losing the author's image.
@@ -100,9 +139,8 @@ def convert_file_to_webp(file_doc) -> str:
 	# must be given the /files/... url — not the absolute filesystem path.
 	delete_file(file_url)
 
-	file_doc.file_url = _to_webp(file_url)
-	if file_doc.file_name:
-		file_doc.file_name = _to_webp(file_doc.file_name)
+	file_doc.file_url = f"/files/{webp_name}"
+	file_doc.file_name = webp_name
 	file_doc.save()
 	return file_doc.file_url
 

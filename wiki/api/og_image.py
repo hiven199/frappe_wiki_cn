@@ -11,23 +11,34 @@ Rendering goes through ``frappe.utils.preview``, which drives the same headless
 Chromium the PDF generator already runs -- no extra dependency and no
 microservice hop. That helper is deliberately *not* whitelisted (screenshotting
 arbitrary HTML server-side is an SSRF surface), so it is only ever called here
-with HTML we build ourselves.
+with HTML we build ourselves. Frappe v15 has no such helper, so there the card
+is drawn by satori instead (see ``wiki.api.og_satori``).
 """
 
 import glob
 import hashlib
 import os
 import re
+import time
 
 import frappe
 from frappe import _
 from frappe.rate_limiter import rate_limit
-from frappe.utils.preview import get_preview_from_html
 from werkzeug.wrappers import Response
+
+from wiki.api import og_satori
+from wiki.telemetry import capture, duration_bucket
+from wiki.utils import lucide_svg, space_mark
+
+try:
+	from frappe.utils.preview import get_preview_from_html
+except ImportError:
+	# The headless-Chromium renderer ships with Frappe v16.
+	get_preview_from_html = None
 
 # Bumped whenever the card template or its token block changes; it is part of
 # the cache fingerprint, so a bump invalidates every cached card for free.
-TEMPLATE_VERSION = "4"
+TEMPLATE_VERSION = "7"
 
 OG_WIDTH = 1200
 OG_HEIGHT = 630
@@ -130,16 +141,35 @@ def _title_font_size(title: str) -> int:
 	return 48
 
 
+def _card_mark(space_doc) -> dict:
+	"""The space's mark as the card draws it: an image URL, or an icon on a tint.
+
+	The same resolution the reader header uses, narrowed to what Chromium can
+	fetch. A generated mark is an SVG ``data:`` URI, which the screenshotter
+	renders inline with no request at all; an uploaded logo has to be a
+	site-local path. ``light_mode_logo`` stays as the v2 fallback for spaces
+	that only ever set that one.
+	"""
+	empty = {"logo_url": "", "avatar_url": "", "icon_svg": "", "mark_color": ""}
+
+	mark = space_mark(space_doc)
+	# A generated mark and an uploaded logo are drawn differently -- the first
+	# is a square the card rounds like the reader does, the second is often a
+	# wordmark that must not be cropped -- so they travel as separate keys.
+	if mark["mode"] == "avatar":
+		return {**empty, "avatar_url": mark["image"]}
+	if mark["mode"] == "icon":
+		return {**empty, "icon_svg": lucide_svg(mark["icon"], "og-glyph"), "mark_color": mark["color"]}
+
+	return {**empty, "logo_url": _safe_asset_url(space_doc.app_switcher_logo or space_doc.light_mode_logo)}
+
+
 def _og_context(doc) -> dict:
 	"""The complete set of inputs the card template consumes."""
 	wiki_space = doc.get_wiki_space()
-	logo_url = ""
+	mark = {"logo_url": "", "avatar_url": "", "icon_svg": "", "mark_color": ""}
 	if wiki_space:
-		space_doc = frappe.get_cached_doc("Wiki Space", wiki_space["name"])
-		# app_switcher_logo is the one the reader header actually renders, so
-		# it is the space's real mark; light_mode_logo is a v2 leftover kept as
-		# a fallback for spaces that only ever set that one.
-		logo_url = _safe_asset_url(space_doc.app_switcher_logo or space_doc.light_mode_logo)
+		mark = _card_mark(frappe.get_cached_doc("Wiki Space", wiki_space["name"]))
 
 	# The page's own title, not meta_title: the card is a visual object where
 	# the title reads as a label for the page you are about to open, while
@@ -150,7 +180,7 @@ def _og_context(doc) -> dict:
 		"title_font_size": _title_font_size(title),
 		"breadcrumb_trail": _breadcrumb_trail(doc),
 		"space_name": (wiki_space.get("space_name") if wiki_space else "") or "",
-		"logo_url": logo_url,
+		**mark,
 	}
 
 
@@ -159,14 +189,21 @@ def og_fingerprint(ctx: dict) -> str:
 
 	Fingerprinting inputs rather than ``modified`` means a content-only edit
 	leaves a still-correct card alone, while a title / breadcrumb / space-name /
-	logo change invalidates on its own -- no invalidation hook anywhere.
+	mark change invalidates on its own -- no invalidation hook anywhere.
 	"""
 	parts = [
 		TEMPLATE_VERSION,
+		# A site that moves from v15 to v16 redraws its satori cards in Chromium.
+		card_renderer() or "",
 		ctx["title"],
 		ctx["breadcrumb_trail"],
 		ctx["space_name"],
 		ctx["logo_url"],
+		ctx["avatar_url"],
+		# The icon markup, not its name: a space that swaps its tint alone
+		# still has to invalidate, and the colour only reaches the card here.
+		ctx["icon_svg"],
+		ctx["mark_color"],
 		str(OG_WIDTH),
 		str(OG_HEIGHT),
 	]
@@ -181,6 +218,11 @@ def _cache_dir() -> str:
 	path = frappe.get_site_path("private", "files", CACHE_DIR_NAME)
 	os.makedirs(path, exist_ok=True)
 	return path
+
+
+def cached_card_count() -> int:
+	"""How many cards this site holds, for the telemetry scan."""
+	return len(glob.glob(os.path.join(_cache_dir(), "*.jpg")))
 
 
 def _is_safe_doc_key(doc_key: str | None) -> bool:
@@ -262,6 +304,8 @@ def render_og_html(ctx: dict) -> str:
 
 
 def generate_og_bytes(ctx: dict) -> bytes:
+	if card_renderer() == "satori":
+		return og_satori.render_jpeg(ctx, OG_WIDTH, OG_HEIGHT)
 	return get_preview_from_html(render_og_html(ctx), format="jpg", width=OG_WIDTH, height=OG_HEIGHT)
 
 
@@ -281,7 +325,7 @@ def _failure_key(doc_key: str, fingerprint: str) -> str:
 	return frappe.cache().make_key(f"wiki_og_fail:{doc_key}:{fingerprint}")
 
 
-def _generate_and_store(doc_key: str, ctx: dict, fingerprint: str, path: str) -> bytes:
+def _generate_and_store(doc_key: str, ctx: dict, fingerprint: str, path: str, trigger: str) -> bytes:
 	"""Render one card, at most once at a time across the whole bench.
 
 	Chromium is expensive and its cold start is measured in seconds, so a
@@ -298,22 +342,51 @@ def _generate_and_store(doc_key: str, ctx: dict, fingerprint: str, path: str) ->
 	if not cache.set(lock, b"1", nx=True, ex=LOCK_TTL):
 		raise CardBusy
 
+	started = time.monotonic()
 	try:
 		data = generate_og_bytes(ctx)
+		_write_cached(path, data)
+		_prune_old(doc_key, fingerprint)
 	except Exception:
 		cache.set(_failure_key(doc_key, fingerprint), b"1", ex=FAILURE_TTL)
+		capture(
+			"meta_image_generated",
+			outcome="failed",
+			trigger=trigger,
+			renderer=card_renderer(),
+			duration_bucket=duration_bucket(time.monotonic() - started),
+		)
 		frappe.log_error("Wiki OG image generation failed")
 		raise CardFailed
 	finally:
 		cache.delete(lock)
 
-	_write_cached(path, data)
-	_prune_old(doc_key, fingerprint)
+	capture(
+		"meta_image_generated",
+		outcome="ok",
+		trigger=trigger,
+		renderer=card_renderer(),
+		duration_bucket=duration_bucket(time.monotonic() - started),
+	)
 	return data
 
 
-def _cards_enabled() -> bool:
-	return bool(frappe.get_cached_value("Wiki Settings", "Wiki Settings", "auto_generate_meta_images"))
+def card_renderer() -> str | None:
+	if get_preview_from_html is not None:
+		return "chromium"
+	if og_satori.available():
+		return "satori"
+	return None
+
+
+def cards_supported() -> bool:
+	return card_renderer() is not None
+
+
+def cards_enabled() -> bool:
+	return cards_supported() and bool(
+		frappe.get_cached_value("Wiki Settings", "Wiki Settings", "auto_generate_meta_images")
+	)
 
 
 def _has_card(doc) -> tuple[str, str] | None:
@@ -344,7 +417,7 @@ def enqueue_og_warmup(doc) -> None:
 	import of a whole wiki into a Chromium storm. Bulk pre-generation is a
 	separate problem.
 	"""
-	if not _cards_enabled():
+	if not cards_enabled():
 		return
 
 	before = doc.get_doc_before_save()
@@ -373,7 +446,7 @@ def enqueue_og_warmup(doc) -> None:
 
 def warm_og_image(name: str) -> None:
 	"""Render and cache a document's card ahead of the first request."""
-	if not _cards_enabled():
+	if not cards_enabled():
 		return
 
 	doc = frappe.get_cached_doc("Wiki Document", name)
@@ -388,7 +461,7 @@ def warm_og_image(name: str) -> None:
 	try:
 		# Same lock and failure keys as the request path, so a worker and a
 		# crawler never both launch Chromium for one card.
-		_generate_and_store(doc.doc_key, _og_context(doc), fingerprint, path)
+		_generate_and_store(doc.doc_key, _og_context(doc), fingerprint, path, trigger="warm")
 	except (CardBusy, CardFailed):
 		# Serving never depends on the warm-up; the request path retries.
 		pass
@@ -408,7 +481,7 @@ def og_image(route: str, v: str | None = None):
 	``Content-Disposition: attachment``, which no ``og:image`` consumer accepts.
 	"""
 	doc = _resolve_doc(route)
-	if not _cards_enabled():
+	if not cards_enabled():
 		# The kill switch has to stop Chromium launching, not just stop the tag
 		# being emitted -- otherwise a site that turned cards off still pays for
 		# every crawler that remembers an old og:image URL.
@@ -425,7 +498,7 @@ def og_image(route: str, v: str | None = None):
 	data = _read_cached(path)
 	if data is None:
 		try:
-			data = _generate_and_store(doc.doc_key, ctx, fp, path)
+			data = _generate_and_store(doc.doc_key, ctx, fp, path, trigger="request")
 		except CardBusy:
 			return _transient_response(503, {"Retry-After": "5"})
 		except CardFailed:

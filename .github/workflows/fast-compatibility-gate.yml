@@ -1,0 +1,75 @@
+name: Fast Compatibility Gate
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fast-compat-wiki-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  OFFICIAL_WIKI_SHA: 0c0adb06b9deb84d11d1f95e85df891c2a29f8da
+
+jobs:
+  fast:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: false
+          persist-credentials: false
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.14'
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Python syntax gate
+        run: python -m compileall -q wiki tests
+
+      - name: Reject unresolved merge markers
+        run: |
+          set -euo pipefail
+          if git grep -nE '^(<<<<<<< |>>>>>>> )' -- .; then
+            echo 'Unresolved merge markers detected.' >&2
+            exit 1
+          fi
+
+      - name: Wiki 3.2.1 lineage and capability contract
+        run: |
+          set -euo pipefail
+          test "$(python - <<'PY'
+          ns = {}
+          exec(open('wiki/__init__.py', encoding='utf-8').read(), ns)
+          print(ns['__version__'])
+          PY
+          )" = "3.2.1"
+          git merge-base --is-ancestor "$OFFICIAL_WIKI_SHA" HEAD
+          node scripts/check-v321-capability-contracts.mjs
+          node scripts/check-cn-i18n-foundation.mjs
+          node scripts/check-cn-public-actions.mjs
+          node scripts/check-cn-seed.mjs
+          node scripts/check-cn-visible-brand.mjs
+          python tests/test_sync_status_i18n_static.py
+          python tests/test_image_viewer_zoom_static.py
+
+      - name: CI policy guard
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          text = Path('.github/workflows/upstream-compatibility-v16.yml').read_text()
+          assert 'workflow_dispatch:' in text
+          assert '\n  push:' not in text
+          assert '\n  pull_request:' not in text
+          print('FAST_COMPAT_GATE=PASS')
+          PY

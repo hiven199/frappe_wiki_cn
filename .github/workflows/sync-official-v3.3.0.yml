@@ -1,0 +1,104 @@
+name: Sync Official Wiki v3.3.0 Candidate
+
+on:
+  push:
+    branches:
+      - compat/wiki-v3.3.0-frappe-v16.36.1-20261002
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: sync-official-wiki-v3-3-0-20261002
+  cancel-in-progress: false
+
+env:
+  TARGET_BRANCH: compat/wiki-v3.3.0-frappe-v16.36.1-20261002
+  UPSTREAM_REPO: https://github.com/frappe/wiki.git
+  UPSTREAM_REF: v3.3.0
+  UPSTREAM_SHA: 04c3cacb7dc2d5a3eae517df19653a4fcd83d723
+
+jobs:
+  capability-base:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout private Wiki candidate
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TARGET_BRANCH }}
+          fetch-depth: 0
+          submodules: false
+
+      - name: Fetch exact official Wiki release
+        run: |
+          set -euo pipefail
+          git remote add official "$UPSTREAM_REPO" || git remote set-url official "$UPSTREAM_REPO"
+          git fetch --no-tags official "refs/tags/$UPSTREAM_REF:refs/tags/$UPSTREAM_REF"
+          ACTUAL="$(git rev-parse "refs/tags/$UPSTREAM_REF^{commit}")"
+          echo "official=$ACTUAL"
+          test "$ACTUAL" = "$UPSTREAM_SHA"
+
+      - name: Check merge state
+        id: state
+        run: |
+          set -euo pipefail
+          if git merge-base --is-ancestor "$UPSTREAM_SHA" HEAD; then
+            echo 'already=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'already=false' >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Merge official v3.3.0 architecture
+        if: steps.state.outputs.already != 'true'
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          set +e
+          git merge --no-ff --no-commit -X theirs "$UPSTREAM_SHA"
+          RC=$?
+          set -e
+          if [ "$RC" -ne 0 ] || [ -n "$(git diff --name-only --diff-filter=U)" ]; then
+            echo '===== UNRESOLVED CONFLICTS ====='
+            git diff --name-only --diff-filter=U
+            exit 1
+          fi
+
+          # Preserve the private compatibility workflows; upstream workflow files
+          # are not runtime application authority for this fork.
+          git restore --source=HEAD --staged --worktree .github/workflows
+          git commit -m "chore: adopt official Wiki v3.3.0 on compatibility candidate"
+
+      - name: Structural gate
+        run: |
+          set -euo pipefail
+          test "$(python - <<'PY'
+          ns = {}
+          exec(open('wiki/__init__.py', encoding='utf-8').read(), ns)
+          print(ns['__version__'])
+          PY
+          )" = "3.3.0"
+          grep -q '1.0.0-beta.76' frontend/package.json
+          test -f scripts/check-cn-i18n-foundation.mjs
+          test -f scripts/check-cn-visible-brand.mjs
+          test -f wiki/wiki/doctype/wiki_space/patches/cn_remove_frappe_branding.py
+          git diff --check HEAD^1..HEAD || true
+
+      - name: Push candidate merge
+        if: steps.state.outputs.already != 'true'
+        run: |
+          set -euo pipefail
+          git push origin "HEAD:$TARGET_BRANCH"
+
+      - name: Summary
+        run: |
+          {
+            echo '## Wiki v3.3.0 compatibility candidate'
+            echo ''
+            echo "- Official exact SHA: \`$UPSTREAM_SHA\`"
+            echo '- Conflict policy: official v3.3.0 wins conflicting runtime architecture hunks.'
+            echo '- Private compatibility workflows remain authoritative.'
+            echo '- CN capability gates remain present and are revalidated after merge.'
+            echo '- Production branches remain untouched.'
+          } >> "$GITHUB_STEP_SUMMARY"

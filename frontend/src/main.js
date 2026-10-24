@@ -1,10 +1,14 @@
-import { createApp } from 'vue';
+import { telemetryPlugin } from '@framework/ui/telemetry/index.ts';
+import { createApp, watchEffect } from 'vue';
 
 import App from './App.vue';
 import router from './router';
 import { initSocket } from './socket';
 import { pinia } from './stores';
+import { useSessionStore } from './stores/session';
+import { useUserStore } from './stores/user';
 
+import { trackPageviews } from './telemetry';
 import translationPlugin, { loadTranslations } from './translation';
 
 import {
@@ -16,7 +20,6 @@ import {
 	FormControl,
 	TextInput,
 	frappeRequest,
-	pageMetaPlugin,
 	resourcesPlugin,
 	setConfig,
 } from 'frappe-ui';
@@ -45,10 +48,21 @@ async function bootstrap() {
 	const app = createApp(App);
 
 	app.use(pinia);
+	const userStore = useUserStore();
+	if (!userStore.data) userStore.fetch().catch(() => {});
 	app.use(router);
 	app.use(translationPlugin);
 	app.use(resourcesPlugin);
-	app.use(pageMetaPlugin);
+
+	// Telemetry is for signed-in app users; the Jinja reader sends nothing.
+	const session = useSessionStore();
+	let telemetryStarted = false;
+	watchEffect(() => {
+		if (!session.isLoggedIn || telemetryStarted) return;
+		telemetryStarted = true;
+		app.use(telemetryPlugin, { app_name: 'wiki' });
+		trackPageviews(router);
+	});
 
 	const socket = initSocket();
 	app.config.globalProperties.$socket = socket;

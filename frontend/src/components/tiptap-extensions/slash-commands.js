@@ -12,7 +12,7 @@
 
 import { Extension } from '@tiptap/core';
 import Suggestion from '@tiptap/suggestion';
-import { translate } from '../../translation';
+import { translate } from '../../translation.js';
 
 const RAW_SLASH_COMMANDS = [
 	{
@@ -142,6 +142,16 @@ const RAW_SLASH_COMMANDS = [
 		},
 	},
 	{
+		title: 'Link to Page',
+		icon: 'lucide-file-symlink',
+		group: 'Insert',
+		keywords: ['linkpage', 'wiki link'],
+		// Typing the picker's own trigger opens it (see page-links.js).
+		command: ({ editor, range }) => {
+			editor.chain().focus().deleteRange(range).insertContent('[[').run();
+		},
+	},
+	{
 		title: 'Horizontal Rule',
 		icon: 'lucide-minus',
 		group: 'Insert',
@@ -158,10 +168,7 @@ const RAW_SLASH_COMMANDS = [
 				.chain()
 				.focus()
 				.deleteRange(range)
-				.insertContent({
-					type: 'calloutBlock',
-					attrs: { type: 'note', title: '', content: '' },
-				})
+				.setCallout({ type: 'note' })
 				.run();
 		},
 	},
@@ -174,10 +181,7 @@ const RAW_SLASH_COMMANDS = [
 				.chain()
 				.focus()
 				.deleteRange(range)
-				.insertContent({
-					type: 'calloutBlock',
-					attrs: { type: 'tip', title: '', content: '' },
-				})
+				.setCallout({ type: 'tip' })
 				.run();
 		},
 	},
@@ -190,14 +194,7 @@ const RAW_SLASH_COMMANDS = [
 				.chain()
 				.focus()
 				.deleteRange(range)
-				.insertContent({
-					type: 'calloutBlock',
-					attrs: {
-						type: 'caution',
-						title: '',
-						content: '',
-					},
-				})
+				.setCallout({ type: 'caution' })
 				.run();
 		},
 	},
@@ -210,14 +207,7 @@ const RAW_SLASH_COMMANDS = [
 				.chain()
 				.focus()
 				.deleteRange(range)
-				.insertContent({
-					type: 'calloutBlock',
-					attrs: {
-						type: 'danger',
-						title: '',
-						content: '',
-					},
-				})
+				.setCallout({ type: 'danger' })
 				.run();
 		},
 	},
