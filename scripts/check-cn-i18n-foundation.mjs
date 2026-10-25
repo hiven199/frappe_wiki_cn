@@ -3,10 +3,10 @@ import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 
-const repoRoot = path.resolve(
-	path.dirname(fileURLToPath(import.meta.url)),
-	'..',
-);
+const rootArg = process.argv.indexOf('--root');
+const repoRoot = rootArg === -1
+	? path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
+	: path.resolve(process.argv[rootArg + 1]);
 const failures = [];
 
 function read(relativePath) {
@@ -71,8 +71,8 @@ forbidMatch(
 );
 requireMatch(
 	'frontend/src/layouts/MainLayout.vue',
-	/<SpaceSidebar\s+v-if=['"]spaceId['"][\s\S]*?<LibrarySidebar\s+v-else\s*\/>/,
-	'v3.2.1 library/space drill-in sidebar split',
+	/<SpaceSidebar\s+v-if=['"]spaceId['"][\s\S]*?<LibrarySidebar\s+v-else-if=['"]isRouteReady['"]\s*\/>/,
+	'route-ready library/space drill-in sidebar split',
 );
 requireMatch(
 	'frontend/src/components/SpaceSettings/AccessPanel.vue',
@@ -203,7 +203,7 @@ requireMatch(
 );
 requireMatch(
 	'wiki/templates/wiki/document.html',
-	/\{\{\s*_\(['"]Last updated['"]\)\s*\}\}/,
+	/\{\{\s*_\(['"]Last updated \{0\}['"]\)\.format\(last_updated\)\s*\}\}/,
 	'localized public Last updated label',
 );
 forbidMatch(
@@ -223,17 +223,17 @@ forbidMatch(
 );
 requireMatch(
 	'wiki/templates/wiki/includes/toc.html',
-	/\{\{\s*_\(['"]On this page['"]\)\s*\}\}/,
+	/\{\{\s*_\(['"]On this page['"]\)\s*\|\s*e\s*\}\}/,
 	'localized public table-of-contents label',
 );
 requireMatch(
 	'wiki/templates/wiki/includes/sidebar.html',
-	/const\s+lastUpdatedLabel\s*=\s*\{\{\s*_\(['"]Last updated['"]\)/,
+	/lastUpdatedEl\.textContent\s*=\s*\{\{\s*_\(['"]Last updated \{0\}['"]\)\s*\|\s*tojson\s*\}\}\.replace\(['"]\{0\}['"],\s*data\.last_updated\)/,
 	'localized SPA-navigation Last updated label',
 );
 requireMatch(
 	'wiki/templates/wiki/includes/sidebar.html',
-	/const\s+onThisPageLabel\s*=\s*\{\{\s*_\(['"]On this page['"]\)/,
+	/escapeHtml\(\{\{\s*_\(['"]On this page['"]\)\s*\|\s*tojson\s*\}\}\)/,
 	'localized SPA-navigation TOC label',
 );
 
