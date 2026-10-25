@@ -1,0 +1,25 @@
+{
+ "doctype": "Dock",
+ "name": "wiki",
+ "app": "wiki",
+ "standard": 1,
+ "user": "",
+ "items": [
+  {
+   "link_type": "Sidebar",
+   "link_to": "Wiki",
+   "title": "Wiki Settings",
+   "icon": "book-open",
+   "added": 0,
+   "hidden": 0
+  },
+  {
+   "link_type": "Sidebar",
+   "link_to": "Frappe Wiki",
+   "title": "Wiki Documents",
+   "icon": "file-text",
+   "added": 0,
+   "hidden": 0
+  }
+ ]
+}

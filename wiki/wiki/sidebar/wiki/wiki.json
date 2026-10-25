@@ -1,0 +1,60 @@
+{
+ "doctype": "Sidebar",
+ "name": "Wiki",
+ "title": "Wiki",
+ "module": "Wiki",
+ "app": "wiki",
+ "standard": 1,
+ "header_icon": "book-open",
+ "items": [
+  {
+   "type": "Link",
+   "label": "Wiki",
+   "link_type": "Workspace",
+   "link_to": "Wiki",
+   "icon": "home"
+  },
+  {
+   "type": "Link",
+   "label": "Wiki App",
+   "link_type": "URL",
+   "url": "/wiki-app",
+   "icon": "book-open"
+  },
+  {
+   "type": "Link",
+   "label": "Wiki Space",
+   "link_type": "DocType",
+   "link_to": "Wiki Space",
+   "icon": "folder"
+  },
+  {
+   "type": "Link",
+   "label": "Wiki Settings",
+   "link_type": "DocType",
+   "link_to": "Wiki Settings",
+   "icon": "settings"
+  },
+  {
+   "type": "Link",
+   "label": "Wiki Documents",
+   "link_type": "DocType",
+   "link_to": "Wiki Document",
+   "icon": "file-text"
+  },
+  {
+   "type": "Link",
+   "label": "Wiki Change Requests",
+   "link_type": "DocType",
+   "link_to": "Wiki Change Request",
+   "icon": "git-pull-request"
+  },
+  {
+   "type": "Link",
+   "label": "Wiki Revisions",
+   "link_type": "DocType",
+   "link_to": "Wiki Revision",
+   "icon": "history"
+  }
+ ]
+}
