@@ -42,6 +42,12 @@ def get_optional_brand_icon() -> str:
 	return optional_brand_icon(frappe.get_website_settings("favicon"))
 
 
+def get_optional_touch_icon() -> str:
+	from wiki.branding_icon import optional_touch_icon
+
+	return optional_touch_icon(frappe.get_website_settings("favicon"))
+
+
 def get_boot():
 	return frappe._dict(
 		{
@@ -53,6 +59,7 @@ def get_boot():
 			"meta_images_supported": cards_supported(),
 			"telemetry": default_properties(),
 			"wiki_brand_icon_url": get_optional_brand_icon(),
+			"wiki_brand_apple_touch_icon_url": get_optional_touch_icon(),
 		}
 	)
 

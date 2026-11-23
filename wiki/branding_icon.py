@@ -20,3 +20,21 @@ def optional_brand_icon(site_favicon=None, load=import_module) -> str:
     if url.startswith("/assets/frappe_cn_fix/branding/icons/wiki-v") and url.endswith(".png"):
         return url
     return ""
+
+
+def optional_touch_icon(site_favicon=None, load=import_module) -> str:
+    """Optional Wiki iOS touch icon only; this does not introduce a PWA."""
+    if site_favicon not in NATIVE:
+        return ""
+    try:
+        provider = load("frappe_cn_fix.branding_pwa")
+    except ImportError:
+        return ""
+    resolver = getattr(provider, "get_pwa_urls", None)
+    if not callable(resolver):
+        return ""
+    value = (resolver("wiki") or {}).get("apple_touch_icon_url")
+    return (
+        value if value == "/assets/frappe_cn_fix/branding/pwa/wiki/apple-touch-180-v1.png"
+        else ""
+    )

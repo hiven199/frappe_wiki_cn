@@ -8,5 +8,15 @@ export function applyWikiBrandIcon(boot, documentRef) {
 	const link = documentRef?.querySelector?.('link[rel="icon"]');
 	if (!link || link.getAttribute('href') !== '/favicon.png?v=2') return false;
 	link.setAttribute('href', url);
+	const apple = boot?.wiki_brand_apple_touch_icon_url;
+	if (apple === '/assets/frappe_cn_fix/branding/pwa/wiki/apple-touch-180-v1.png' &&
+		!documentRef.querySelector?.('link[rel="apple-touch-icon"]') &&
+		typeof documentRef.createElement === 'function' && documentRef.head) {
+		const touch = documentRef.createElement('link');
+		touch.setAttribute('rel', 'apple-touch-icon');
+		touch.setAttribute('sizes', '180x180');
+		touch.setAttribute('href', apple);
+		documentRef.head.appendChild(touch);
+	}
 	return true;
 }
