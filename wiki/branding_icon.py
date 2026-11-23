@@ -9,12 +9,12 @@ def optional_brand_icon(site_favicon=None, load=import_module) -> str:
         return ""
     try:
         branding = load("frappe_cn_fix.branding_assets")
-    except ImportError:
+        resolver = getattr(branding, "get_app_brand_url", None)
+        if not callable(resolver):
+            return ""
+        url = resolver("wiki")
+    except Exception:
         return ""
-    resolver = getattr(branding, "get_app_brand_url", None)
-    if not callable(resolver):
-        return ""
-    url = resolver("wiki")
     if not isinstance(url, str):
         return ""
     if url.startswith("/assets/frappe_cn_fix/branding/icons/wiki-v") and url.endswith(".png"):
@@ -28,12 +28,15 @@ def optional_touch_icon(site_favicon=None, load=import_module) -> str:
         return ""
     try:
         provider = load("frappe_cn_fix.branding_pwa")
-    except ImportError:
+        resolver = getattr(provider, "get_pwa_urls", None)
+        if not callable(resolver):
+            return ""
+        pack = resolver("wiki") or {}
+    except Exception:
         return ""
-    resolver = getattr(provider, "get_pwa_urls", None)
-    if not callable(resolver):
+    if not isinstance(pack, dict):
         return ""
-    value = (resolver("wiki") or {}).get("apple_touch_icon_url")
+    value = pack.get("apple_touch_icon_url")
     return (
         value if value == "/assets/frappe_cn_fix/branding/pwa/wiki/apple-touch-180-v1.png"
         else ""
