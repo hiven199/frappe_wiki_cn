@@ -1,3 +1,9 @@
+// Vite prefixes public assets with the configured production base at build time.
+const NATIVE_FAVICONS = new Set([
+	'/favicon.png?v=2',
+	'/assets/wiki/frontend/favicon.png?v=2',
+]);
+
 /** Only replace the Wiki's native favicon when a registered opt-in brand is present. */
 export function applyWikiBrandIcon(boot, documentRef) {
 	const url = boot?.wiki_brand_icon_url;
@@ -6,7 +12,7 @@ export function applyWikiBrandIcon(boot, documentRef) {
 		return false;
 	}
 	const link = documentRef?.querySelector?.('link[rel="icon"]');
-	if (!link || link.getAttribute('href') !== '/favicon.png?v=2') return false;
+	if (!link || !NATIVE_FAVICONS.has(link.getAttribute('href'))) return false;
 	link.setAttribute('href', url);
 	const apple = boot?.wiki_brand_apple_touch_icon_url;
 	if (apple === '/assets/frappe_cn_fix/branding/pwa/wiki/apple-touch-180-v1.png' &&

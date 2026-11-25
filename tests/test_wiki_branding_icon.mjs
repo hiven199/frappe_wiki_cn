@@ -28,3 +28,16 @@ test('disabled/untrusted paths do not mutate the document', () => {
 	}
 	assert.equal(x.current(), '/favicon.png?v=2')
 })
+
+test('production favicon emitted under the configured Vite base is a native icon', () => {
+	const url = '/assets/frappe_cn_fix/branding/icons/wiki-v3.png'
+	const built = page('/assets/wiki/frontend/favicon.png?v=2')
+	assert.equal(applyWikiBrandIcon({ wiki_brand_icon_url: url }, built), true)
+	assert.equal(built.current(), url)
+	for (const href of ['/files/favicon.png?v=2', '/assets/other/favicon.png?v=2',
+		'/assets/wiki/frontend/favicon.png?customer=1', 'https://example.invalid/favicon.png?v=2']) {
+		const custom = page(href)
+		assert.equal(applyWikiBrandIcon({ wiki_brand_icon_url: url }, custom), false)
+		assert.equal(custom.current(), href)
+	}
+})
