@@ -35,6 +35,19 @@ def get_context_for_dev():
 	return get_boot()
 
 
+def get_optional_brand_icon() -> str:
+	# Owner-selected Website Settings favicon always wins over app default icons.
+	from wiki.branding_icon import optional_brand_icon
+
+	return optional_brand_icon(frappe.get_website_settings("favicon"))
+
+
+def get_optional_touch_icon() -> str:
+	from wiki.branding_icon import optional_touch_icon
+
+	return optional_touch_icon(frappe.get_website_settings("favicon"))
+
+
 def get_boot():
 	return frappe._dict(
 		{
@@ -45,6 +58,8 @@ def get_boot():
 			"asset_hashes": get_asset_hashes(),
 			"meta_images_supported": cards_supported(),
 			"telemetry": default_properties(),
+			"wiki_brand_icon_url": get_optional_brand_icon(),
+			"wiki_brand_apple_touch_icon_url": get_optional_touch_icon(),
 		}
 	)
 

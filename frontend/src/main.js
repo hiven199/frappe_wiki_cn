@@ -9,6 +9,7 @@ import { useSessionStore } from './stores/session';
 import { useUserStore } from './stores/user';
 
 import { trackPageviews } from './telemetry';
+import { applyWikiBrandIcon } from './branding_icon.mjs';
 import translationPlugin, { loadTranslations } from './translation';
 
 import {
@@ -38,6 +39,7 @@ const globalComponents = {
 };
 
 async function bootstrap() {
+	applyWikiBrandIcon(window.boot, document);
 	setConfig('resourceFetcher', frappeRequest);
 
 	// Translation-aware components compute many labels during setup. Loading
